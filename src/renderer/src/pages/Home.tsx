@@ -24,7 +24,7 @@ export default function Home({
     <div className="page">
       <h1>清理中心</h1>
       <p className="muted">
-        对标 NetpowerWinCleaner 的免费自用版 · 无广告 · 无付费墙 · Electron {info?.electron ?? ''}
+        免费自用版 · 无广告 · 无付费墙 · Electron {info?.electron ?? ''}
       </p>
       <div className="card-grid">
         {cards.map((c) => (
@@ -43,7 +43,9 @@ export default function Home({
           <li>聊天记录、浏览器登录状态、文档文件不会被删除</li>
         </ul>
       </div>
-      <p className="muted small">当前版本 {info?.version ?? '-'}</p>
+      <p className="muted small">
+        当前版本 {info?.version ?? '-'} · 开发者：匡形无界-啄之堂
+      </p>
     </div>
   )
 }

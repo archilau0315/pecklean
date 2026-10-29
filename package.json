@@ -1,9 +1,9 @@
 {
   "name": "surperclean",
   "version": "1.0.0",
-  "description": "免费自用 Windows 清理工具（对标 NetpowerWinCleaner 核心功能）",
+  "description": "免费自用的 Windows 清理工具",
   "main": "out/main/index.js",
-  "author": "self",
+  "author": "匡形无界-啄之堂",
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",

@@ -1,4 +1,4 @@
-/** 垃圾清理规则（对标 NetpowerWinCleaner 扫描项，v1 安全子集）
+/** 垃圾清理规则（常用软件与系统缓存的安全子集）
  * pattern 支持 %ENV% 与 * 通配；admin=true 的项通过 UAC 提权清理
  */
 export interface JunkRule {

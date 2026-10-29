@@ -41,7 +41,7 @@ export default function App(): React.JSX.Element {
             </button>
           ))}
         </nav>
-        <div className="sidebar-foot">免费自用版 v1.0</div>
+        <div className="sidebar-foot">匡形无界-啄之堂 · v1.0</div>
       </aside>
       <main className="content">
         {page === 'home' && <Home go={setPage} />}

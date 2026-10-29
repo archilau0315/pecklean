@@ -1,4 +1,4 @@
-/** 隐私清理引擎：运行历史、最近文件、跳转列表、浏览器历史（对标原软件 Privacy.Scanner 系列） */
+/** 隐私清理引擎：运行历史、最近文件、跳转列表、浏览器历史 */
 import { promises as fs } from 'fs'
 import { existsSync, readdirSync } from 'fs'
 import os from 'os'

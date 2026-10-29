@@ -1,4 +1,4 @@
-/** 大文件与重复文件引擎（对标原软件 Download 大文件 / RepetitionFile 重复清理） */
+/** 大文件与重复文件引擎：按体积筛选大文件，按「大小 → 头部哈希 → MD5」找重复 */
 import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
