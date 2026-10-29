@@ -1,6 +1,7 @@
 /** 电脑加速引擎：启动项管理（注册表 Run + 启动文件夹）与进程清理 */
 import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
+import { spawn } from 'child_process'
 import path from 'path'
 import { runPowerShell, runElevated } from './utils'
 import { pick } from '../lang'
@@ -10,6 +11,8 @@ const RUN = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 const RUN_HKLM = 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 const RUN_HKLM_WOW = 'HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Run'
 const RUN_DISABLED = 'SurperCleanDisabled'
+/** 三个 Run 位置对应的禁用备份键 */
+const RUN_BACKUP_KEYS = [RUN, RUN_HKLM, RUN_HKLM_WOW].map((k) => k.replace('Run', RUN_DISABLED))
 
 interface RawEntry {
   hive: 'HKCU' | 'HKLM'
@@ -38,6 +41,8 @@ async function readRunEntries(hive: 'HKCU' | 'HKLM', key: string): Promise<RawEn
   }
 }
 
+const DISABLED_SUFFIX = '.surperclean-disabled'
+
 async function readFolderEntries(): Promise<StartupItem[]> {
   const folders = [
     path.join(process.env.APPDATA!, 'Microsoft\\Windows\\Start Menu\\Programs\\Startup'),
@@ -48,13 +53,16 @@ async function readFolderEntries(): Promise<StartupItem[]> {
     if (!existsSync(folder)) continue
     const files = await fs.readdir(folder).catch(() => [])
     for (const f of files) {
+      // 被本工具禁用的文件带后缀，仍要列出来（否则界面看起来“禁用后消失了”）
+      const off = f.toLowerCase().endsWith(DISABLED_SUFFIX)
+      const base = off ? f.slice(0, -DISABLED_SUFFIX.length) : f
       items.push({
-        id: `folder|${folder}|${f}`,
-        name: f.replace(/\.(lnk|bat|cmd|exe)$/i, ''),
-        command: path.join(folder, f),
+        id: `folder|${folder}|${base}`,
+        name: base.replace(/\.(lnk|bat|cmd|exe)$/i, ''),
+        command: path.join(folder, base),
         location: '启动文件夹',
         hive: 'FOLDER',
-        enabled: true
+        enabled: !off
       })
     }
   }
@@ -84,8 +92,9 @@ export async function listStartup(): Promise<StartupItem[]> {
 async function listDisabled(): Promise<RawEntry[]> {
   const out: RawEntry[] = []
   for (const [hive, key] of [
-    ['HKCU', RUN.replace('Run', RUN_DISABLED)],
-    ['HKLM', RUN_HKLM.replace('Run', RUN_DISABLED)]
+    ['HKCU', RUN_BACKUP_KEYS[0]],
+    ['HKLM', RUN_BACKUP_KEYS[1]],
+    ['HKLM', RUN_BACKUP_KEYS[2]]
   ] as const) {
     out.push(...(await readRunEntries(hive, key)))
   }
@@ -95,12 +104,12 @@ async function listDisabled(): Promise<RawEntry[]> {
 /** 启用/禁用启动项：注册表值移入 SurperCleanDisabled 备份键；文件夹项改名 .disabled */
 export async function toggleStartup(id: string, enable: boolean, lang: Lang = 'zh'): Promise<{ ok: boolean; message: string }> {
   const [kind, key, name] = id.split('|')
-  if (kind === 'FOLDER') {
+  if (kind.toUpperCase() === 'FOLDER') {
     const full = key // key 位存的是完整路径，name 是文件名
     const src = path.join(full, name)
-    const dst = enable ? src : `${src}.surperclean-disabled`
+    const dst = enable ? src : `${src}${DISABLED_SUFFIX}`
     try {
-      await fs.rename(enable ? `${src}.surperclean-disabled` : src, dst)
+      await fs.rename(enable ? `${src}${DISABLED_SUFFIX}` : src, dst)
       return { ok: true, message: pick(lang, '已切换', 'Toggled') }
     } catch (e) {
       return { ok: false, message: (e as Error).message }
@@ -149,10 +158,17 @@ export async function listProcesses(): Promise<ProcessItem[]> {
 }
 
 export async function killProcess(pid: number, lang: Lang = 'zh'): Promise<{ ok: boolean; message: string }> {
-  try {
-    process.kill(pid)
-    return { ok: true, message: pick(lang, '已结束', 'Terminated') }
-  } catch (e) {
-    return { ok: false, message: (e as Error).message }
-  }
+  return new Promise((resolveP) => {
+    const proc = spawn('taskkill.exe', ['/PID', String(pid), '/F', '/T'], { windowsHide: true })
+    let err = ''
+    proc.stderr.on('data', (d: Buffer) => (err += d.toString()))
+    proc.on('close', (code) => {
+      if (code === 0) resolveP({ ok: true, message: pick(lang, '已结束', 'Terminated') })
+      else {
+        const reason = err.trim() || pick(lang, '进程不存在或无权结束', 'Process missing or access denied')
+        resolveP({ ok: false, message: reason })
+      }
+    })
+    proc.on('error', (e) => resolveP({ ok: false, message: e.message }))
+  })
 }

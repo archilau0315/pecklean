@@ -10,6 +10,7 @@ export default function Files(): React.JSX.Element {
   const [root, setRoot] = useState('')
   const [minMB, setMinMB] = useState(100)
   const [bigFiles, setBigFiles] = useState<BigFileItem[]>([])
+  const [bigChecked, setBigChecked] = useState<Set<string>>(new Set())
   const [dupGroups, setDupGroups] = useState<DuplicateGroup[]>([])
   const [dupChecked, setDupChecked] = useState<Set<string>>(new Set())
   const [busy, setBusy] = useState(false)
@@ -26,6 +27,7 @@ export default function Files(): React.JSX.Element {
   const scanBig = async (): Promise<void> => {
     setBusy(true)
     setBigFiles([])
+    setBigChecked(new Set())
     const off = window.api.onBigProgress((p) => setProgress(t('files.progress.big', { path: p })))
     try {
       setBigFiles(await window.api.findBig(roots, minMB))
@@ -58,7 +60,19 @@ export default function Files(): React.JSX.Element {
       t('files.deleted', { n: r.files }) + (r.errors.length ? t('files.deletedFail', { n: r.errors.length }) : '')
     )
     setBigFiles((prev) => prev.filter((f) => !paths.includes(f.path)))
+    setBigChecked((prev) => new Set([...prev].filter((p) => !paths.includes(p))))
   }
+
+  const toggleBig = (p: string): void => {
+    setBigChecked((prev) => {
+      const next = new Set(prev)
+      if (next.has(p)) next.delete(p)
+      else next.add(p)
+      return next
+    })
+  }
+
+  const allBigChecked = bigFiles.length > 0 && bigChecked.size === bigFiles.length
 
   const deleteDup = async (): Promise<void> => {
     if (!dupChecked.size || !confirm(t('files.confirmDup', { n: dupChecked.size }))) return
@@ -77,6 +91,17 @@ export default function Files(): React.JSX.Element {
       const next = new Set(prev)
       if (next.has(p)) next.delete(p)
       else next.add(p)
+      return next
+    })
+  }
+
+  const toggleGroup = (g: DuplicateGroup, on: boolean): void => {
+    setDupChecked((prev) => {
+      const next = new Set(prev)
+      for (const f of g.files) {
+        if (on) next.add(f.path)
+        else next.delete(f.path)
+      }
       return next
     })
   }
@@ -121,8 +146,25 @@ export default function Files(): React.JSX.Element {
               {t('files.scan')}
             </button>
           </div>
+          {bigFiles.length > 0 && (
+            <div className="filter-row">
+              <label className="chip">
+                <input
+                  type="checkbox"
+                  checked={allBigChecked}
+                  onChange={() => setBigChecked(allBigChecked ? new Set() : new Set(bigFiles.map((f) => f.path)))}
+                />
+                {allBigChecked ? t('files.deselectAll') : t('files.selectAll')}
+              </label>
+              <span className="spacer" />
+              <button className="btn danger" onClick={() => deleteBig([...bigChecked])} disabled={busy || !bigChecked.size}>
+                {t('files.deleteSelected', { n: bigChecked.size })}
+              </button>
+            </div>
+          )}
           {bigFiles.map((f) => (
             <div key={f.path} className="item-row">
+              <input type="checkbox" checked={bigChecked.has(f.path)} onChange={() => toggleBig(f.path)} />
               <span className="item-samples grow" title={f.path}>
                 {f.path}
               </span>
@@ -159,22 +201,28 @@ export default function Files(): React.JSX.Element {
               </button>
             </div>
           )}
-          {dupGroups.map((g) => (
-            <div key={g.hash} className="dup-group">
-              <div className="category-title">
-                {t('files.dupGroup', { n: g.files.length, size: formatBytes(g.files[0]?.bytes ?? 0) })}
+          {dupGroups.map((g) => {
+            const allPicked = g.files.every((f) => dupChecked.has(f.path))
+            return (
+              <div key={g.hash} className="dup-group">
+                <div className="category-title">
+                  {t('files.dupGroup', { n: g.files.length, size: formatBytes(g.files[0]?.bytes ?? 0) })}
+                  <button className="btn small" onClick={() => toggleGroup(g, !allPicked)}>
+                    {allPicked ? t('files.groupNone') : t('files.groupAll')}
+                  </button>
+                </div>
+                {g.files.map((f) => (
+                  <label key={f.path} className="item-row">
+                    <input type="checkbox" checked={dupChecked.has(f.path)} onChange={() => toggleDup(f.path)} />
+                    <span className="item-samples grow" title={f.path}>
+                      {f.path}
+                    </span>
+                    <span className="item-size">{formatBytes(f.bytes)}</span>
+                  </label>
+                ))}
               </div>
-              {g.files.map((f, idx) => (
-                <label key={f.path} className="item-row">
-                  <input type="checkbox" disabled={idx === 0} checked={dupChecked.has(f.path)} onChange={() => toggleDup(f.path)} />
-                  <span className="item-samples grow" title={f.path}>
-                    {f.path}
-                  </span>
-                  {idx === 0 && <span className="badge on">{t('files.keep')}</span>}
-                </label>
-              ))}
-            </div>
-          ))}
+            )
+          })}
           {!busy && dupGroups.length === 0 && <div className="empty-state">{t('files.empty.dup')}</div>}
         </>
       )}

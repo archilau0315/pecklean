@@ -14,22 +14,55 @@ interface PrivacyRule {
   clean: () => Promise<string[]> // 返回错误列表
 }
 
-/** 注册表删除值/键（仅 HKCU，无需管理员） */
-function regDel(args: string): Promise<void> {
-  return runPowerShell(`Remove-Item ${args} -ErrorAction SilentlyContinue`).then(() => undefined)
+/** 注册表清理脚本：必须是真的执行，失败要冒出来（不再用 SilentlyContinue 吞掉） */
+function regDel(script: string): Promise<void> {
+  return runPowerShell(script, 30000).then(() => undefined)
 }
 
-function regCount(args: string): Promise<number> {
-  return runPowerShell(`(Get-Item ${args} -ErrorAction SilentlyContinue).Count`)
-    .then((v) => parseInt(v.trim(), 10) || 0)
-    .catch(() => 0)
+async function psCount(script: string): Promise<number> {
+  const out = await runPowerShell(script, 30000).catch(() => '0')
+  return parseInt(out.trim(), 10) || 0
 }
 
-const RUN_MRU = "'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU'"
-const RECENT_DOCS = "'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs'"
-const TYPED_PATHS = "'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\TypedPaths'"
-const USER_ASSIST = "'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist'"
-const FEATURE_TIP = "'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FeatureUsage'"
+/** 键下值数量（键不存在返回 0） */
+function countProps(key: string): Promise<number> {
+  return psCount(`$k='${key}'; if (Test-Path $k) { (Get-Item $k).Property.Count } else { 0 }`)
+}
+
+/** 键下子键数量（递归） */
+function countTree(key: string): Promise<number> {
+  return psCount(
+    `$k='${key}'; if (Test-Path $k) { (Get-ChildItem $k -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count } else { 0 }`
+  )
+}
+
+const RUN_MRU = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU'
+const RECENT_DOCS = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RecentDocs'
+const TYPED_PATHS = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\TypedPaths'
+const USER_ASSIST = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\UserAssist'
+const FEATURE_TIP = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FeatureUsage'
+
+/** 删除键下所有值（保留键本身） */
+async function cleanValues(key: string): Promise<string[]> {
+  try {
+    await regDel(
+      `$k='${key}'; if (Test-Path $k) { (Get-Item $k).Property | ForEach-Object { Remove-ItemProperty -Path $k -Name $_ -ErrorAction Stop } }`
+    )
+    return []
+  } catch (e) {
+    return [(e as Error).message]
+  }
+}
+
+/** 删除键下所有子项（递归），保留键本身 */
+async function cleanTree(key: string): Promise<string[]> {
+  try {
+    await regDel(`$k='${key}'; if (Test-Path $k) { Remove-Item "$k\\*" -Recurse -Force -ErrorAction Stop }`)
+    return []
+  } catch (e) {
+    return [(e as Error).message]
+  }
+}
 
 function recentDir(sub = ''): string {
   return path.join(process.env.APPDATA!, 'Microsoft\\Windows\\Recent', sub)
@@ -81,82 +114,36 @@ const RULES: PrivacyRule[] = [
     id: 'run-mru',
     name: '运行命令历史',
     desc: 'Win+R 输入记录',
-    count: () => regCount(RUN_MRU),
-    clean: async () => {
-      const errs: string[] = []
-      try {
-        await regDel(`${RUN_MRU} -DeleteProperty *`)
-      } catch (e) {
-        errs.push((e as Error).message)
-      }
-      return errs
-    }
+    count: () => countProps(RUN_MRU),
+    clean: async () => cleanValues(RUN_MRU)
   },
   {
     id: 'recent-docs',
     name: '最近打开文档记录',
     desc: '资源管理器与开始菜单的最近文件',
-    count: () => regCount(RECENT_DOCS),
-    clean: async () => {
-      const errs: string[] = []
-      try {
-        await regDel(`${RECENT_DOCS} -Recurse`)
-      } catch (e) {
-        errs.push((e as Error).message)
-      }
-      return errs
-    }
+    count: () => countTree(RECENT_DOCS),
+    clean: async () => cleanTree(RECENT_DOCS)
   },
   {
     id: 'typed-paths',
     name: '地址栏输入历史',
     desc: '资源管理器地址栏记录',
-    count: () => regCount(TYPED_PATHS),
-    clean: async () => {
-      try {
-        await regDel(`${TYPED_PATHS} -DeleteProperty *`)
-      } catch (e) {
-        return [(e as Error).message]
-      }
-      return []
-    }
+    count: () => countProps(TYPED_PATHS),
+    clean: async () => cleanValues(TYPED_PATHS)
   },
   {
     id: 'user-assist',
     name: '程序使用痕迹',
     desc: '系统统计的程序启动记录',
-    count: async () => {
-      try {
-        const out = await runPowerShell(
-          `(Get-ChildItem ${USER_ASSIST} -ErrorAction SilentlyContinue | Get-ChildItem -Name Count).Count`
-        )
-        return parseInt(out.trim(), 10) || 0
-      } catch {
-        return 0
-      }
-    },
-    clean: async () => {
-      try {
-        await regDel(`${USER_ASSIST}\\* -Recurse`)
-      } catch (e) {
-        return [(e as Error).message]
-      }
-      return []
-    }
+    count: () => countTree(USER_ASSIST),
+    clean: async () => cleanTree(USER_ASSIST)
   },
   {
     id: 'feature-usage',
     name: '系统功能使用统计',
     desc: '开始菜单/通知使用痕迹',
-    count: () => regCount(FEATURE_TIP),
-    clean: async () => {
-      try {
-        await regDel(`${FEATURE_TIP} -DeleteProperty *`)
-      } catch (e) {
-        return [(e as Error).message]
-      }
-      return []
-    }
+    count: () => countTree(FEATURE_TIP),
+    clean: async () => cleanTree(FEATURE_TIP)
   },
   {
     id: 'recent-files',
