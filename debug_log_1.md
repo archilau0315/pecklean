@@ -42,5 +42,13 @@
 - 变更简述：新增一键启动脚本。双击后自动检查 Node 环境、缺少依赖则 npm install、每次重新构建最新代码，再以生产模式启动 Electron，无需记命令
 - 备注：已实测双击后窗口正常打开（标题 SurperClean 清理工具）；关闭窗口即退出
 
+## 7
+
+- 时间：2026-10-29 17:30
+- 模块：ipc.ts、preload/index.ts、api.d.ts、pages/Move.tsx、readme.md
+- 变更简述：目录搬移支持资源管理器选目录。新增 `dialog:pickFolder` IPC（系统文件夹选择框，可新建文件夹），原目录与新位置各加一个「选择」按钮；手动选定的目标位置不再被「目标盘」自动覆盖，目录大小显示改为独立于目标位置计算
+- 备注：typecheck/build 通过；开发态 CDP 确认两个按钮渲染正常、pickFolder 已暴露
+
+
 
 

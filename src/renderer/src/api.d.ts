@@ -20,6 +20,8 @@ import type {
 
 interface Api {
   appInfo(): Promise<AppInfo>
+  /** 打开系统文件夹选择框，取消时返回空字符串 */
+  pickFolder(opts: { title: string; defaultPath?: string }): Promise<string>
   junkScan(ids: string[] | null): Promise<ScanItem[]>
   junkClean(ids: string[]): Promise<CleanResult>
   onJunkScanProgress(cb: (p: ScanProgress) => void): () => void

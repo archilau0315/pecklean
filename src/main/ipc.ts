@@ -1,5 +1,5 @@
 /** IPC 注册：渲染进程唯一入口 */
-import { ipcMain, app, BrowserWindow } from 'electron'
+import { ipcMain, app, BrowserWindow, dialog } from 'electron'
 import { scanJunk, cleanJunk, JUNK_IDS } from './core/junk'
 import { scanPrivacy, cleanPrivacy } from './core/privacy'
 import { listStartup, toggleStartup, listProcesses, killProcess } from './core/startup'
@@ -21,6 +21,21 @@ export function registerIpc(): void {
     electron: process.versions.electron,
     node: process.versions.node
   }))
+
+  // ── 系统目录选择框 ──
+  ipcMain.handle(
+    'dialog:pickFolder',
+    async (_e, opts: { title: string; defaultPath?: string }): Promise<string> => {
+      const win = BrowserWindow.getAllWindows()[0]
+      const options: Electron.OpenDialogOptions = {
+        title: opts.title,
+        defaultPath: opts.defaultPath,
+        properties: ['openDirectory', 'createDirectory']
+      }
+      const res = win ? await dialog.showOpenDialog(win, options) : await dialog.showOpenDialog(options)
+      return res.canceled || !res.filePaths.length ? '' : res.filePaths[0]
+    }
+  )
 
   // ── 垃圾清理 ──
   ipcMain.handle('junk:scan', async (_e, ids: string[] | null) =>

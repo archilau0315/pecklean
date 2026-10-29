@@ -8,6 +8,7 @@ export default function Move(): React.JSX.Element {
   const [src, setSrc] = useState('')
   const [drive, setDrive] = useState('')
   const [dest, setDest] = useState('')
+  const [manualDest, setManualDest] = useState(false)
   const [size, setSize] = useState(0)
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState<MoveProgress | null>(null)
@@ -23,18 +24,46 @@ export default function Move(): React.JSX.Element {
   }, [])
 
   useEffect(() => {
-    if (!src.trim() || !drive) return
+    if (!src.trim() || !drive || manualDest) return
     let alive = true
     window.api.moveDefaultTarget(src.trim(), drive).then((t) => {
       if (alive) setDest(t)
     })
+    return () => {
+      alive = false
+    }
+  }, [src, drive, manualDest])
+
+  useEffect(() => {
+    if (!src.trim()) {
+      setSize(0)
+      return
+    }
+    let alive = true
     window.api.moveSize(src.trim()).then((s) => {
       if (alive) setSize(s)
     })
     return () => {
       alive = false
     }
-  }, [src, drive])
+  }, [src])
+
+  // 系统文件夹选择框：原目录与新位置都可直接在资源管理器里点选
+  const pickSrc = async (): Promise<void> => {
+    const p = await window.api.pickFolder({ title: '选择要搬移的目录' })
+    if (p) {
+      setSrc(p)
+      setManualDest(false)
+    }
+  }
+
+  const pickDest = async (): Promise<void> => {
+    const p = await window.api.pickFolder({ title: '选择新的存放位置', defaultPath: dest || undefined })
+    if (p) {
+      setDest(p)
+      setManualDest(true)
+    }
+  }
 
   const start = async (): Promise<void> => {
     if (!src.trim() || !dest.trim()) return
@@ -83,11 +112,17 @@ export default function Move(): React.JSX.Element {
           <span className="form-label">原目录</span>
           <input
             className="text-input grow"
-            placeholder="要搬走的文件夹，如 C:\Users\你的名字\Documents\WeChat Files"
+            placeholder="要搬走的文件夹，点右侧「选择」也可以"
             value={src}
-            onChange={(e) => setSrc(e.target.value)}
+            onChange={(e) => {
+              setSrc(e.target.value)
+              setManualDest(false)
+            }}
             disabled={busy}
           />
+          <button className="btn" onClick={pickSrc} disabled={busy}>
+            选择
+          </button>
         </div>
         <div className="form-row">
           <span className="form-label">目标盘</span>
@@ -106,7 +141,19 @@ export default function Move(): React.JSX.Element {
         </div>
         <div className="form-row">
           <span className="form-label">新位置</span>
-          <input className="text-input grow" value={dest} onChange={(e) => setDest(e.target.value)} disabled={busy} />
+          <input
+            className="text-input grow"
+            placeholder="新的存放目录，点右侧「选择」也可以"
+            value={dest}
+            onChange={(e) => {
+              setDest(e.target.value)
+              setManualDest(true)
+            }}
+            disabled={busy}
+          />
+          <button className="btn" onClick={pickDest} disabled={busy}>
+            选择
+          </button>
         </div>
         {src && size > 0 && <div className="muted small">目录大小 {formatBytes(size)}，复制时请勿关闭相关软件</div>}
 

@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
   appInfo: () => ipcRenderer.invoke('app:info'),
+  pickFolder: (opts: { title: string; defaultPath?: string }) => ipcRenderer.invoke('dialog:pickFolder', opts),
 
   junkScan: (ids: string[] | null) => ipcRenderer.invoke('junk:scan', ids),
   junkClean: (ids: string[]) => ipcRenderer.invoke('junk:clean', ids),
