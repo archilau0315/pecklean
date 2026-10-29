@@ -2,7 +2,7 @@
 
 > 免费、纯净、无广告的 Windows 清理工具
 
-**开发者：匡形无界-啄之堂**
+**开发者：匡形无界-啄之堂**（Kuanform Boundless · Archilau Studio）
 
 ![Electron](https://img.shields.io/badge/Electron-33-2B2E3A?logo=electron&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
@@ -126,4 +126,4 @@ npm start          # 预览构建产物
 
 ---
 
-<p align="center">匡形无界-啄之堂 · 个人自用项目 · 不提供商业分发 · 使用前请自行评估风险</p>
+<p align="center">匡形无界-啄之堂（Kuanform Boundless · Archilau Studio） · 个人自用项目 · 不提供商业分发 · 使用前请自行评估风险</p>

@@ -12,7 +12,7 @@ export const en: Record<string, string> = {
   'nav.uninstall': 'Uninstall',
   'nav.move': 'Move Folders',
   'nav.schedule': 'Scheduled Cleanup',
-  'nav.footer': 'Kuangxing Wujie Studio · v1.0',
+  'nav.footer': 'Kuanform Boundless · Archilau Studio · v1.0',
 
   // ── Home ──
   'home.title': 'Cleanup Center',
@@ -35,7 +35,7 @@ export const en: Record<string, string> = {
   'home.safety.1': 'Scan first, delete only what you select; by default only safe caches are targeted',
   'home.safety.2': 'System-level items (Windows temp, prefetch) trigger a UAC confirmation',
   'home.safety.3': 'Chat history, browser sign-ins and documents are never deleted',
-  'home.version': 'Version {version} · By Kuangxing Wujie Studio',
+  'home.version': 'Version {version} · By Kuanform Boundless · Archilau Studio',
 
   // ── Junk cleanup ──
   'junk.title': 'Junk Cleanup',
