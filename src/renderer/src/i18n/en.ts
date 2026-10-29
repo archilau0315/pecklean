@@ -1,7 +1,8 @@
 /** English dictionary (flat keys, mirrors zh) */
 
 export const en: Record<string, string> = {
-  'app.title': 'SurperClean',
+  'app.title': 'Pecklean',
+  'app.name': 'Pecklean',
 
   // ── Navigation ──
   'nav.home': 'Home',
@@ -237,7 +238,7 @@ export const en: Record<string, string> = {
   'schedule.recycleDesc': 'Recycle bin contents will be permanently deleted',
   'schedule.tip.title': 'Notes',
   'schedule.tip.1': 'Only safe cache items that need no admin rights are cleaned; system items are skipped to avoid UAC prompts at night',
-  'schedule.tip.2': 'The task is named SurperClean_AutoClean and can be disabled anytime in Task Scheduler',
+  'schedule.tip.2': 'The task is named Pecklean_AutoClean and can be disabled anytime in Task Scheduler',
   'schedule.tip.3': 'Results are written to a log, shown under "Recent log" below',
   'schedule.save': 'Save settings',
   'schedule.saving': 'Working…',

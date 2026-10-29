@@ -1,7 +1,8 @@
 /** 中文词典（基准语言，扁平 key） */
 
 export const zh: Record<string, string> = {
-  'app.title': 'SurperClean 清理工具',
+  'app.title': '啄净 清理工具',
+  'app.name': '啄净',
 
   // ── 导航 ──
   'nav.home': '首页',
@@ -240,7 +241,7 @@ export const zh: Record<string, string> = {
   'schedule.recycleDesc': '回收站里的文件将被永久删除',
   'schedule.tip.title': '说明',
   'schedule.tip.1': '定时清理只处理无需管理员权限的安全缓存项，系统级项目会跳过，避免半夜弹 UAC',
-  'schedule.tip.2': '计划任务名为 SurperClean_AutoClean，可在「任务计划程序」中随时停用',
+  'schedule.tip.2': '计划任务名为 Pecklean_AutoClean，可在「任务计划程序」中随时停用',
   'schedule.tip.3': '清理结果记录在日志里，见下方「最近记录」',
   'schedule.save': '保存设置',
   'schedule.saving': '处理中…',

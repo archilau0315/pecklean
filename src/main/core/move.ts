@@ -49,10 +49,10 @@ async function countFiles(dir: string): Promise<{ files: number; bytes: number }
   return st
 }
 
-/** 默认目标目录：盘符:\\SurperCleanMove\\<目录名> */
+/** 默认目标目录：盘符:\\PeckleanMove\\<目录名> */
 export function defaultTarget(src: string, drive: string): string {
   const letter = drive.replace(/:.*$/, '').toUpperCase()
-  return path.join(`${letter}:`, 'SurperCleanMove', path.basename(src))
+  return path.join(`${letter}:`, 'PeckleanMove', path.basename(src))
 }
 
 /** 可用盘符（本机固定磁盘） */

@@ -213,7 +213,7 @@ export function runPowerShell(script: string, timeoutMs = 60000): Promise<string
 /** 以管理员身份运行脚本（触发 UAC），返回退出码 */
 export function runElevated(script: string, timeoutMs = 300000): Promise<number> {
   return new Promise((resolveP, rejectP) => {
-    const file = path.join(os.tmpdir(), `surperclean-admin-${Date.now()}.ps1`)
+    const file = path.join(os.tmpdir(), `pecklean-admin-${Date.now()}.ps1`)
     // 带 BOM 保存，PowerShell 才能正确识别中文路径
     require('fs').writeFileSync(file, '\ufeff' + script, 'utf8')
     const cmd = [

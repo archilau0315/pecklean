@@ -10,7 +10,7 @@ import { formatBytes } from './utils'
 import { pick } from '../lang'
 import { ScheduleConfig, ScheduleStatus, CleanResult, Lang } from '../../shared/types'
 
-const TASK_NAME = 'SurperClean_AutoClean'
+const TASK_NAME = 'Pecklean_AutoClean'
 
 function configFile(): string {
   return path.join(app.getPath('userData'), 'schedule.json')

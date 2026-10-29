@@ -10,7 +10,7 @@ import { StartupItem, ProcessItem, Lang } from '../../shared/types'
 const RUN = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 const RUN_HKLM = 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 const RUN_HKLM_WOW = 'HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Run'
-const RUN_DISABLED = 'SurperCleanDisabled'
+const RUN_DISABLED = 'PeckleanDisabled'
 /** 三个 Run 位置对应的禁用备份键 */
 const RUN_BACKUP_KEYS = [RUN, RUN_HKLM, RUN_HKLM_WOW].map((k) => k.replace('Run', RUN_DISABLED))
 
@@ -41,7 +41,7 @@ async function readRunEntries(hive: 'HKCU' | 'HKLM', key: string): Promise<RawEn
   }
 }
 
-const DISABLED_SUFFIX = '.surperclean-disabled'
+const DISABLED_SUFFIX = '.pecklean-disabled'
 
 async function readFolderEntries(): Promise<StartupItem[]> {
   const folders = [
@@ -101,7 +101,7 @@ async function listDisabled(): Promise<RawEntry[]> {
   return out
 }
 
-/** 启用/禁用启动项：注册表值移入 SurperCleanDisabled 备份键；文件夹项改名 .disabled */
+/** 启用/禁用启动项：注册表值移入 PeckleanDisabled 备份键；文件夹项改名 .disabled */
 export async function toggleStartup(id: string, enable: boolean, lang: Lang = 'zh'): Promise<{ ok: boolean; message: string }> {
   const [kind, key, name] = id.split('|')
   if (kind.toUpperCase() === 'FOLDER') {

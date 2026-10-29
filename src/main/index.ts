@@ -21,7 +21,7 @@ function createWindow(): void {
     minHeight: 620,
     show: false,
     autoHideMenuBar: true,
-    title: 'SurperClean 清理工具',
+    title: '啄净 清理工具',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

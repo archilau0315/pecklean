@@ -91,6 +91,14 @@
 - 变更简述：大文件支持逐条勾选 + 全选/取消全选 + 批量删除；重复文件去掉强制「建议保留」锁，每条都可勾选，并加「选中本组/取消本组」；隐私清理重写注册表删除命令（原 UserAssist 命令拼接非法、FeatureUsage 只删值不删子键、错误被 SilentlyContinue 吞掉），改为值/子键分别清理并显式报错；启动项修复启动文件夹项因大小写判断导致无法启停、禁用项从列表消失、Wow6432Node 禁用项读不回来；结束进程改用 taskkill /F /T 并回传失败原因
 - 备注：已在真实环境验证注册表删除、启动项禁用/启用、taskkill 均生效；测试用注册表项与进程已清理
 
+## 14
+
+- 时间：2026-10-29 21:40
+- 模块：App.tsx、i18n/zh.ts、i18n/en.ts、main/index.ts、renderer/index.html、启动.bat、package.json、readme.md
+- 变更简述：应用更名「啄净 / Pecklean」：侧边栏 logo 与品牌名、窗口标题、页面 title、启动脚本、包描述、readme 标题同步更新；新增 app.name 双语键供界面读取
+- 备注：内部标识同步改为 Pecklean：启动项备份键 PeckleanDisabled、文件夹禁用后缀 .pecklean-disabled、计划任务 Pecklean_AutoClean、搬移默认目录 PeckleanMove、提权临时脚本 pecklean-admin-*.ps1；已确认本机没有旧的 SurperClean 备份键/禁用项/计划任务/搬移目录，改名不会造成失联
+
+
 
 
 

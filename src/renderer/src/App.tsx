@@ -39,8 +39,8 @@ function Shell(): React.JSX.Element {
     <div className="app">
       <aside className="sidebar">
         <div className="logo">
-          <span className="logo-icon">SC</span>
-          <span>SurperClean</span>
+          <span className="logo-icon">啄</span>
+          <span>{t('app.name')}</span>
         </div>
         <nav>
           {NAV.map((n) => (
