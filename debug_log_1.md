@@ -70,6 +70,14 @@
 - 变更简述：补充开发者英文名。英文界面侧边栏与首页版本行改为 Kuanform Boundless · Archilau Studio，readme 标题区与页脚同步标注中英名称
 - 备注：中文界面保持「匡形无界-啄之堂」不变
 
+## 11
+
+- 时间：2026-10-29 19:45
+- 模块：core/uninstall.ts
+- 变更简述：修复点击卸载后不弹窗口。原实现把 UninstallString 整串交给 `cmd /c` 执行，路径含空格且未加引号时（如 `D:\Program Files\NetPowerCleaner\NetpowerWinCleaner\uninst.exe`）cmd 把 `D:\Program` 当命令而直接报错退出；改为先拆分出 exe 路径与参数，再用 Start-Process 提权直接启动，路径不存在时给出明确提示
+- 备注：新增 parseCommand 支持带引号路径和含空格未加引号路径；typecheck/build 通过
+
+
 
 
 

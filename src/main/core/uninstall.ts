@@ -102,8 +102,20 @@ export async function uninstallApp(
       return { ok: true, message: pick(lang, `${app.name} 已卸载`, `${app.name} uninstalled`) }
     }
     // 厂商卸载程序多为安装向导（需要点下一步、可能要重启），不阻塞等待
+    const { exe, args } = parseCommand(cmd)
+    if (!existsSync(expand(exe))) {
+      return {
+        ok: false,
+        message: pick(
+          lang,
+          `找不到卸载程序：${exe}（可能已被删除），可直接点「扫描残留」清理剩余文件`,
+          `Uninstaller not found: ${exe} (may be deleted). Use "Scan leftovers" to clean up`
+        )
+      }
+    }
+    const argPart = args ? ` -ArgumentList '${esc(args)}'` : ''
     await runElevated(
-      `$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','${esc(cmd)}' -Verb RunAs -PassThru; exit 0`,
+      `$p = Start-Process -FilePath '${esc(exe)}'${argPart} -Verb RunAs -PassThru; exit 0`,
       120000
     )
     return {
@@ -125,6 +137,16 @@ export async function uninstallApp(
 
 function esc(s: string): string {
   return s.replace(/'/g, "''")
+}
+
+/** 拆分卸载命令：支持带引号的路径逐段参数，也支持路径含空格但未加引号的情况 */
+function parseCommand(cmd: string): { exe: string; args: string } {
+  const s = cmd.trim()
+  const quoted = s.match(/^"([^"]+)"\s*(.*)$/)
+  if (quoted) return { exe: quoted[1], args: quoted[2].trim() }
+  const exeEnd = s.match(/^(.+?\.exe)(?:\s+([\s\S]*))?$/i)
+  if (exeEnd) return { exe: exeEnd[1], args: (exeEnd[2] || '').trim() }
+  return { exe: s, args: '' }
 }
 
 /** 软件注册表键是否仍存在（存在即仍处于安装状态） */
