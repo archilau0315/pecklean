@@ -77,6 +77,14 @@
 - 变更简述：修复点击卸载后不弹窗口。原实现把 UninstallString 整串交给 `cmd /c` 执行，路径含空格且未加引号时（如 `D:\Program Files\NetPowerCleaner\NetpowerWinCleaner\uninst.exe`）cmd 把 `D:\Program` 当命令而直接报错退出；改为先拆分出 exe 路径与参数，再用 Start-Process 提权直接启动，路径不存在时给出明确提示
 - 备注：新增 parseCommand 支持带引号路径和含空格未加引号路径；typecheck/build 通过
 
+## 12
+
+- 时间：2026-10-29 20:05
+- 模块：core/junk.ts
+- 变更简述：修复回收站清不掉。原实现用 `Clear-RecycleBin`，本机回收站有 153 万文件/89 GB，该命令长时间不返回，被 60 秒超时判失败；改为直接操作 `$Recycle.Bin\<当前用户 SID>`：用 PowerShell 递归统计大小、逐项 `Remove-Item` 删除，残留再走提权删除；扫描改为磁盘目录统计并与规则扫描并行，避免 COM 枚举卡死
+- 备注：超时提高到 600 秒；仍被占用的项目会提示「重启后再清理」；typecheck/build 通过
+
+
 
 
 
