@@ -157,6 +157,9 @@ h1 { font-size: 22px; margin-bottom: 4px; }
   white-space: pre-wrap; font-family: Consolas, monospace; user-select: text;
 }
 
+/* 已访问页面保持挂载，仅隐藏：切换回来时扫描/搬移进度不丢 */
+.page-wrap.hidden { display: none; }
+
 .dup-group { border: 1px solid var(--border); border-radius: 10px; padding: 6px 10px; margin-bottom: 14px; }
 .dup-group .item-row { background: transparent; border: none; }
 .dup-group .item-row:hover { background: var(--bg-hover); }

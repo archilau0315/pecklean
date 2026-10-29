@@ -23,6 +23,19 @@ type PageKey = (typeof NAV)[number]['key']
 
 export default function App(): React.JSX.Element {
   const [page, setPage] = useState<PageKey>('home')
+  // 页面首次访问后保持挂载，仅隐藏不卸载：扫描/搬移等长任务切走再切回可继续
+  const [visited, setVisited] = useState<PageKey[]>(['home'])
+
+  const go = (p: PageKey): void => {
+    setPage(p)
+    setVisited((prev) => (prev.includes(p) ? prev : [...prev, p]))
+  }
+
+  const show = (key: PageKey, node: React.JSX.Element): React.JSX.Element | null =>
+    visited.includes(key) ? (
+      <div className={`page-wrap${page === key ? '' : ' hidden'}`}>{node}</div>
+    ) : null
+
   return (
     <div className="app">
       <aside className="sidebar">
@@ -35,7 +48,7 @@ export default function App(): React.JSX.Element {
             <button
               key={n.key}
               className={`nav-item ${page === n.key ? 'active' : ''}`}
-              onClick={() => setPage(n.key)}
+              onClick={() => go(n.key)}
             >
               {n.label}
             </button>
@@ -44,14 +57,14 @@ export default function App(): React.JSX.Element {
         <div className="sidebar-foot">匡形无界-啄之堂 · v1.0</div>
       </aside>
       <main className="content">
-        {page === 'home' && <Home go={setPage} />}
-        {page === 'junk' && <Junk />}
-        {page === 'startup' && <Startup />}
-        {page === 'privacy' && <Privacy />}
-        {page === 'files' && <Files />}
-        {page === 'uninstall' && <Uninstall />}
-        {page === 'move' && <Move />}
-        {page === 'schedule' && <Schedule />}
+        {show('home', <Home go={go} />)}
+        {show('junk', <Junk />)}
+        {show('startup', <Startup />)}
+        {show('privacy', <Privacy />)}
+        {show('files', <Files />)}
+        {show('uninstall', <Uninstall />)}
+        {show('move', <Move />)}
+        {show('schedule', <Schedule />)}
       </main>
     </div>
   )
