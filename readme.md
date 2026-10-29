@@ -41,7 +41,7 @@
 ## 📂 项目结构
 
 ```
-surperclean/
+pecklean/
 ├─ src/
 │  ├─ main/                 # 主进程（系统操作全部在这里）
 │  │  ├─ index.ts           # 入口；开发态开 9222 调试；--autoclean 静默模式

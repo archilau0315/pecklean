@@ -98,6 +98,14 @@
 - 变更简述：应用更名「啄净 / Pecklean」：侧边栏 logo 与品牌名、窗口标题、页面 title、启动脚本、包描述、readme 标题同步更新；新增 app.name 双语键供界面读取
 - 备注：内部标识同步改为 Pecklean：启动项备份键 PeckleanDisabled、文件夹禁用后缀 .pecklean-disabled、计划任务 Pecklean_AutoClean、搬移默认目录 PeckleanMove、提权临时脚本 pecklean-admin-*.ps1；已确认本机没有旧的 SurperClean 备份键/禁用项/计划任务/搬移目录，改名不会造成失联
 
+## 15
+
+- 时间：2026-10-29 22:35
+- 模块：项目根目录、package.json、package-lock.json、readme.md
+- 变更简述：项目目录从 surperclean 改为 pecklean，包名同步改为 pecklean，readme 目录树同步；Git 仓库随目录迁移，历史提交完整保留
+- 备注：旧目录被当前编辑器进程占用无法直接改名，改用 robocopy 全量迁移（含 .git、node_modules），新旧目录内容一致；确认新目录 typecheck/build 通过后启动验证
+
+
 
 
 
