@@ -1,6 +1,9 @@
 /** 垃圾清理引擎：按规则扫描统计，按选择清理（普通项 Node 删，管理员项提权删） */
 import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
+import { spawn } from 'child_process'
+import os from 'os'
+import path from 'path'
 import { JUNK_RULES, JunkRule } from './junkRules'
 import { deletePath, resolveGlob, walkFiles, runElevated, runPowerShell, formatBytes } from './utils'
 import { ScanItem, CleanResult, ScanProgress } from '../../shared/types'
@@ -178,19 +181,21 @@ async function cleanRecycleBin(): Promise<{ files: number; bytes: number; errors
   const before = await measureRecycle(dirs)
   res.files = before.files
   res.bytes = before.bytes
-  const purgeScript = dirs
-    .map(
-      (d) =>
-        `Get-ChildItem -LiteralPath '${d.replace(/'/g, "''")}' -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue`
-    )
-    .join('\r\n')
-  // 普通权限先删（自己的回收站一般可删），条目多时也比逐个文件快
-  try {
-    await runPowerShell(purgeScript, 600000)
-  } catch (e) {
-    res.errors.push(`回收站清理: ${(e as Error).message}`)
+  // 用 robocopy 空目录镜像删除：几十万小文件时比逐个删快得多
+  for (const dir of dirs) {
+    try {
+      await mirrorEmpty(dir)
+    } catch {
+      /* 失败时走下面的提权兜底 */
+    }
   }
   if (await hasEntries(dirs)) {
+    const purgeScript = dirs
+      .map(
+        (d) =>
+          `Get-ChildItem -LiteralPath '${d.replace(/'/g, "''")}' -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue`
+      )
+      .join('\r\n')
     try {
       await runElevated(purgeScript, 600000)
     } catch (e) {
@@ -199,6 +204,23 @@ async function cleanRecycleBin(): Promise<{ files: number; bytes: number; errors
   }
   if (await hasEntries(dirs)) res.errors.push('部分回收站项目被占用，未能清除（可重启后再清理）')
   return res
+}
+
+/** 用空目录镜像清空目标目录（robocopy /MIR），返回是否执行成功 */
+function mirrorEmpty(dir: string): Promise<boolean> {
+  const empty = path.join(os.tmpdir(), 'sc-empty-mirror')
+  return fs.mkdir(empty, { recursive: true }).then(
+    () =>
+      new Promise<boolean>((resolveP) => {
+        const proc = spawn(
+          'robocopy.exe',
+          [empty, dir, '/MIR', '/R:0', '/W:0', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS', '/NP'],
+          { windowsHide: true }
+        )
+        proc.on('close', (code) => resolveP((code ?? 16) < 8))
+        proc.on('error', () => resolveP(false))
+      })
+  )
 }
 
 async function hasEntries(dirs: string[]): Promise<boolean> {
