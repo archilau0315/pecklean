@@ -36,7 +36,8 @@ export default function Uninstall(): React.JSX.Element {
       const r = await window.api.uninstallRemove(app, lang)
       setMsg(r.message)
       await load()
-      await findLeftovers(app)
+      // 交互式卸载程序仍在运行，等用户完成后自行点「扫描残留」，避免误删正在卸载的文件
+      if (!r.interactive) await findLeftovers(app)
     } finally {
       setBusyId('')
     }

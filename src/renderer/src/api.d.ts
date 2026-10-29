@@ -39,7 +39,7 @@ interface Api {
   onBigProgress(cb: (p: string) => void): () => void
   onDupProgress(cb: (p: number) => void): () => void
   uninstallList(): Promise<UninstallItem[]>
-  uninstallRemove(item: UninstallItem, lang: Lang): Promise<{ ok: boolean; message: string }>
+  uninstallRemove(item: UninstallItem, lang: Lang): Promise<{ ok: boolean; message: string; interactive?: boolean }>
   uninstallLeftovers(item: UninstallItem): Promise<LeftoverReport>
   cleanLeftovers(items: LeftoverItem[]): Promise<{ ok: number; bytes: number; errors: string[] }>
   movePresets(): Promise<MovePreset[]>

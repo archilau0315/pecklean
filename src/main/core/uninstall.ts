@@ -75,8 +75,11 @@ function cleanRegPath(psPath?: string): string {
   return psPath.replace(/^Microsoft\.PowerShell\.Core\\Registry::/, '')
 }
 
-/** 卸载：MSI 走静默参数，其余调用原始卸载命令（均提权执行） */
-export async function uninstallApp(app: UninstallItem, lang: Lang = 'zh'): Promise<{ ok: boolean; message: string }> {
+/** 卸载：MSI 静默等待完成；其余为交互式向导，只启动不等待，避免界面假死 */
+export async function uninstallApp(
+  app: UninstallItem,
+  lang: Lang = 'zh'
+): Promise<{ ok: boolean; message: string; interactive?: boolean }> {
   const cmd = app.quietUninstall || app.uninstall
   if (!cmd) {
     return {
@@ -98,16 +101,18 @@ export async function uninstallApp(app: UninstallItem, lang: Lang = 'zh'): Promi
       )
       return { ok: true, message: pick(lang, `${app.name} 已卸载`, `${app.name} uninstalled`) }
     }
+    // 厂商卸载程序多为安装向导（需要点下一步、可能要重启），不阻塞等待
     await runElevated(
-      `$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','${esc(cmd)}' -Verb RunAs -Wait -PassThru; exit $p.ExitCode`,
-      600000
+      `$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','${esc(cmd)}' -Verb RunAs -PassThru; exit 0`,
+      120000
     )
     return {
       ok: true,
+      interactive: true,
       message: pick(
         lang,
-        `${app.name} 卸载结束（如仍有窗口请按提示操作）`,
-        `${app.name} uninstall finished (follow any remaining prompts)`
+        `已启动 ${app.name} 的卸载程序，请在弹出的窗口中按提示完成。完成后点「扫描残留」清理剩余文件`,
+        `Started the ${app.name} uninstaller. Complete it in the window that just opened, then click "Scan leftovers"`
       )
     }
   } catch (e) {
