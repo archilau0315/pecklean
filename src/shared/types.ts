@@ -61,3 +61,64 @@ export interface AppInfo {
   electron: string
   node: string
 }
+
+/** 已安装软件（来自注册表 Uninstall 键） */
+export interface UninstallItem {
+  /** 注册表子键名或完整键路径 */
+  id: string
+  name: string
+  version: string
+  publisher: string
+  installLocation: string
+  uninstall: string
+  quietUninstall: string
+  /** 注册表登记大小（KB） */
+  sizeKB: number
+  date: string
+}
+
+/** 卸载残留：注册表键 / 目录 / 快捷方式 */
+export interface LeftoverItem {
+  id: string
+  kind: 'registry' | 'dir' | 'shortcut'
+  path: string
+  desc: string
+  bytes: number
+}
+
+/** 残留扫描结果；installed=true 表示软件仍处于安装状态，列出的项可能是正常数据 */
+export interface LeftoverReport {
+  installed: boolean
+  items: LeftoverItem[]
+}
+
+export interface MovePreset {
+  name: string
+  path: string
+  exists: boolean
+  bytes: number
+}
+
+export interface MoveProgress {
+  phase: string
+  percent: number
+}
+
+export interface MoveResult {
+  ok: boolean
+  message: string
+}
+
+export interface ScheduleConfig {
+  enabled: boolean
+  /** HH:mm */
+  time: string
+  junkIds: string[]
+  privacy: boolean
+  recycleBin: boolean
+}
+
+export interface ScheduleStatus extends ScheduleConfig {
+  taskExists: boolean
+  log: string
+}

@@ -29,10 +29,30 @@ const api = {
     return () => ipcRenderer.removeListener('files:big-progress', fn)
   },
   onDupProgress: (cb: (p: unknown) => void) => {
-    const fn = (_e: unknown, p: unknown) => cb(p)
+    const fn = (_e: unknown, p: unknown): void => cb(p)
     ipcRenderer.on('files:dup-progress', fn)
     return () => ipcRenderer.removeListener('files:dup-progress', fn)
-  }
+  },
+
+  uninstallList: () => ipcRenderer.invoke('uninstall:list'),
+  uninstallRemove: (item: unknown) => ipcRenderer.invoke('uninstall:remove', item),
+  uninstallLeftovers: (item: unknown) => ipcRenderer.invoke('uninstall:leftovers', item),
+  cleanLeftovers: (items: unknown[]) => ipcRenderer.invoke('uninstall:cleanLeftovers', items),
+
+  movePresets: () => ipcRenderer.invoke('move:presets'),
+  moveDrives: () => ipcRenderer.invoke('move:drives'),
+  moveSize: (dir: string) => ipcRenderer.invoke('move:size', dir),
+  moveDefaultTarget: (src: string, drive: string) => ipcRenderer.invoke('move:defaultTarget', src, drive),
+  moveRun: (src: string, dest: string) => ipcRenderer.invoke('move:run', src, dest),
+  onMoveProgress: (cb: (p: unknown) => void) => {
+    const fn = (_e: unknown, p: unknown): void => cb(p)
+    ipcRenderer.on('move:progress', fn)
+    return () => ipcRenderer.removeListener('move:progress', fn)
+  },
+
+  scheduleGet: () => ipcRenderer.invoke('schedule:get'),
+  scheduleSave: (cfg: unknown) => ipcRenderer.invoke('schedule:save', cfg),
+  scheduleRunNow: () => ipcRenderer.invoke('schedule:runNow')
 }
 
 contextBridge.exposeInMainWorld('api', api)

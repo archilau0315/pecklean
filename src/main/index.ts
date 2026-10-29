@@ -1,11 +1,15 @@
 import { app, BrowserWindow, shell } from 'electron'
 import { join } from 'path'
 import { registerIpc } from './ipc'
+import { runAutoClean } from './core/schedule'
 
 let win: BrowserWindow | null = null
 
+/** 计划任务以 --autoclean 启动：静默清理后退出，不显示窗口 */
+const AUTO_CLEAN = process.argv.includes('--autoclean')
+
 // 开发模式开启远程调试，便于自动化验证 UI
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'development' && !AUTO_CLEAN) {
   app.commandLine.appendSwitch('remote-debugging-port', '9222')
 }
 
@@ -39,14 +43,21 @@ function createWindow(): void {
   }
 }
 
-app.whenReady().then(() => {
-  registerIpc()
-  createWindow()
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+if (AUTO_CLEAN) {
+  app.whenReady().then(async () => {
+    await runAutoClean()
+    app.quit()
   })
-})
+} else {
+  app.whenReady().then(() => {
+    registerIpc()
+    createWindow()
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    })
+  })
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
-})
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') app.quit()
+  })
+}

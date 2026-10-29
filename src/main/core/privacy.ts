@@ -199,6 +199,9 @@ const RULES: PrivacyRule[] = [
   }))
 ]
 
+/** 全部隐私清理项 id（定时清理用） */
+export const PRIVACY_IDS = RULES.map((r) => r.id)
+
 export async function scanPrivacy(): Promise<PrivacyItem[]> {
   const items: PrivacyItem[] = []
   for (const r of RULES) {

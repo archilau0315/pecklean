@@ -1,76 +1,119 @@
-# SurperClean 清理工具
+# SurperClean
 
-免费自用的 Windows 清理工具（对标 NetpowerWinCleaner 核心功能），无广告、无付费墙。
+> 免费、纯净、无广告的 Windows 清理工具 —— 对标 NetpowerWinCleaner 自用实现
 
-## 项目用途
+![Electron](https://img.shields.io/badge/Electron-33-2B2E3A?logo=electron&logoColor=white)
+![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white)
+![License](https://img.shields.io/badge/License-个人自用-3fb950)
+![Ads](https://img.shields.io/badge/广告-0-e5534b)
 
-清理 Windows 垃圾文件、管理开机启动项、清理隐私痕迹、查找大文件与重复文件。
+---
 
-## 技术栈
+## ✨ 特性
 
-Electron 33 + React 18 + TypeScript + electron-vite（开发用 `npm run dev`，构建用 `npm run build`）
-
-## 模块清单
-
-### 主进程（src/main）
-
-| 模块 | 职责 |
+| 模块 | 能做什么 |
 |---|---|
-| index.ts | 应用入口，创建窗口；dev 模式开启 9222 远程调试 |
-| ipc.ts | IPC 通道注册，渲染进程唯一入口 |
-| core/utils.ts | 大小格式化、环境变量展开、通配解析、安全删除、目录遍历、PowerShell 执行、UAC 提权、MD5 |
-| core/junkRules.ts | 垃圾清理规则（24 项：临时文件/系统缓存/浏览器/常用软件），加规则改这里 |
-| core/junk.ts | 垃圾扫描与清理；管理员项合并一次 UAC；回收站走 PowerShell |
-| core/privacy.ts | 隐私清理：运行历史、最近文档、UserAssist、跳转列表、Chrome/Edge 历史 |
-| core/startup.ts | 启动项管理（Run 注册表键 + 启动文件夹，禁用项备份到 SurperCleanDisabled 键）、进程列表与结束 |
-| core/files.ts | 大文件扫描、重复文件查找（大小→头部哈希→全量 MD5）、文件删除 |
+| 🧹 **垃圾清理** | 24 条规则覆盖系统缓存、浏览器缓存、常用软件缓存与回收站，扫描后按分类勾选清理 |
+| ⚡ **电脑加速** | 管理开机启动项（禁用项可随时恢复）、查看并结束占用内存的进程 |
+| 🔒 **隐私清理** | 运行历史、最近文档、地址栏记录、程序使用痕迹、Chrome / Edge 浏览历史 |
+| 📁 **大文件 / 重复** | 按体积找大文件，按「大小 → 头部哈希 → MD5」三级比对找重复文件 |
+| 🗑️ **软件卸载** | 读取注册表中的已装软件，一键调用原生卸载程序，并扫描注册表 / 目录 / 快捷方式残留 |
+| 🔀 **目录搬移** | 微信、QQ 等大目录整体搬到其他盘，原位置建立 Junction 链接，软件路径无感 |
+| ⏰ **定时清理** | 注册 Windows 计划任务，每天固定时间后台静默清理，日志可查 |
 
-### 预加载（src/preload）
+**没有**广告弹窗、付费墙、捆绑安装、常驻后台进程。
 
-| 模块 | 职责 |
-|---|---|
-| index.ts | contextBridge 暴露 window.api（扫描/清理/启动项/进程/文件全部接口） |
+---
 
-### 渲染进程（src/renderer/src）
+## 🧱 技术栈
 
-| 模块 | 职责 |
-|---|---|
-| App.tsx | 布局与导航 |
-| pages/Home.tsx | 首页功能卡片 + 安全说明 |
-| pages/Junk.tsx | 垃圾清理：扫描→分类结果→勾选→一键清理 |
-| pages/Startup.tsx | 电脑加速：启动项启用/禁用 + 进程管理 |
-| pages/Privacy.tsx | 隐私清理：扫描计数→勾选清理 |
-| pages/Files.tsx | 大文件/重复文件：条件扫描→勾选删除 |
-| pages/fmt.ts | 前端格式化工具 |
-| styles.css | 暗色主题样式 |
+- **Electron 33**：跨平台桌面壳，主进程负责所有系统操作
+- **React 18 + TypeScript**：界面层，`contextBridge` 隔离，渲染进程无 Node 权限
+- **electron-vite**：开发热更新与生产打包
+- 系统能力通过 **PowerShell / robocopy / schtasks** 调用，不依赖第三方原生模块
 
-### 共享（src/shared）
+---
 
-| 模块 | 职责 |
-|---|---|
-| types.ts | 主/渲染进程共享类型定义 |
+## 📂 项目结构
 
-## 使用说明
-
-```powershell
-npm install        # 首次安装
-npm run dev        # 开发调试
-npm run build      # 构建产物到 out/
-npm run typecheck  # 类型检查
+```
+surperclean/
+├─ src/
+│  ├─ main/                 # 主进程（系统操作全部在这里）
+│  │  ├─ index.ts           # 入口；开发态开 9222 调试；--autoclean 静默模式
+│  │  ├─ ipc.ts             # IPC 通道统一注册
+│  │  └─ core/
+│  │     ├─ utils.ts        # 大小格式化、路径展开、安全删除、PowerShell、UAC 提权、MD5
+│  │     ├─ junkRules.ts    # 24 条垃圾清理规则（加规则改这里）
+│  │     ├─ junk.ts         # 垃圾扫描与清理
+│  │     ├─ privacy.ts      # 隐私痕迹扫描与清理
+│  │     ├─ startup.ts      # 启动项、进程管理
+│  │     ├─ files.ts        # 大文件、重复文件
+│  │     ├─ uninstall.ts    # 软件列表、卸载、残留扫描清理
+│  │     ├─ move.ts         # 目录搬移（复制 → 校验 → Junction）
+│  │     └─ schedule.ts     # 定时清理配置、计划任务、静默执行
+│  ├─ preload/index.ts      # contextBridge 暴露 window.api
+│  ├─ renderer/src/         # 界面
+│  │  ├─ App.tsx            # 布局与侧边导航
+│  │  ├─ pages/             # Home / Junk / Startup / Privacy / Files / Uninstall / Move / Schedule
+│  │  └─ styles.css         # 暗色主题
+│  └─ shared/types.ts       # 主/渲染共享类型
+├─ out/                     # 构建产物
+└─ debug_log_1.md           # 变更记录
 ```
 
-- 界面左侧导航：首页 / 垃圾清理 / 电脑加速 / 隐私清理 / 大文件·重复
-- 垃圾清理默认只勾选安全缓存项；带 **UAC** 徽章的系统项清理时会弹提权确认
-- 浏览器历史清理需先完全退出对应浏览器
-- 禁用的启动项可在注册表 `SurperCleanDisabled` 键中找回
+---
 
-## 对标原版功能（v1 已实现 / 未实现）
+## 🚀 使用说明
 
-| 功能 | 状态 |
+```powershell
+npm install        # 首次安装依赖
+npm run dev        # 开发调试（热更新）
+npm run typecheck  # 类型检查
+npm run build      # 构建到 out/
+npm start          # 预览构建产物
+```
+
+1. 启动后左侧选择功能模块，首页卡片也可直接跳转。
+2. **垃圾清理**：先「开始扫描」，确认列表后「一键清理」。带 `UAC` 徽章的系统项会弹出一次提权确认。
+3. **软件卸载**：选中软件点「卸载」，结束后自动扫描残留；「扫描残留」可随时手动触发。
+4. **目录搬移**：选择常用目录或手填路径 → 选目标盘 → 点「开始搬移」，完成后原目录变成链接。
+5. **定时清理**：勾选「开启定时自动清理」并保存，计划任务即写入系统；「立即运行一次」可先验证效果。
+
+---
+
+## 🛡️ 安全设计
+
+- **先扫描、后勾选、再删除**，默认只选中无需管理员权限的安全缓存项
+- 删除操作带根目录边界校验，任何越界路径直接跳过
+- 启动项禁用不删除，备份到注册表 `SurperCleanDisabled` 键，可随时恢复
+- 目录搬移三重保护：`robocopy` 复制 → 文件数与总字节逐一校验 → 校验失败自动回滚
+- 卸载残留扫描会识别「软件仍处于安装状态」，此时只列出、不默认勾选，避免误删正常数据
+- 浏览器历史清理会检测浏览器进程，未退出则跳过并提示
+- 定时清理只执行免提权项目，不会在深夜弹出 UAC
+
+---
+
+## 🧩 模块职责速查
+
+| 文件 | 关键职责 |
 |---|---|
-| 垃圾清理（系统/浏览器/常用软件缓存、回收站） | ✅ |
-| 隐私清理（MRU/跳转列表/浏览历史） | ✅ |
-| 启动项管理 + 进程清理 | ✅ |
-| 大文件 / 重复文件 | ✅ |
-| 软件卸载与残留、目录搬移、弹窗拦截、定时清理、加速球 | 未实现（后续迭代） |
-| 广告、付费墙、全家桶推广 | 永远不会实现 😄 |
+| `core/utils.ts` | 统一底层能力：`expand` / `resolveGlob` / `deletePath` / `walkFiles` / `runPowerShell`（UTF-8 输出）/ `runElevated`（UAC）/ `md5File` |
+| `core/junk.ts` | 规则驱动扫描；管理员项合并成一次提权；回收站走 `Clear-RecycleBin` |
+| `core/privacy.ts` | 8 类隐私痕迹；导出 `PRIVACY_IDS` 供定时清理复用 |
+| `core/uninstall.ts` | 三处 Uninstall 注册表根；MSI 静默 `/x /qn`；非 MSI 调原生命令；残留按名称归一化匹配 |
+| `core/move.ts` | 常用目录预设、磁盘列表、剩余空间校验、robocopy 进度、Junction 建立与回滚 |
+| `core/schedule.ts` | 配置存 `userData/schedule.json`；`schtasks` 注册/删除；日志写 `autoclean.log` |
+
+---
+
+## 📝 备注
+
+- 搬移或卸载前请先退出微信 / QQ / 浏览器等正在使用目标目录的程序
+- 计划任务名为 `SurperClean_AutoClean`，可在「任务计划程序」中随时查看或停用
+- 禁用启动项、定时清理配置、清理日志都保存在用户目录，不写入系统敏感位置
+
+---
+
+<p align="center">个人自用项目 · 不提供商业分发 · 使用前请自行评估风险</p>

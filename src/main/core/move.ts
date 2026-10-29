@@ -1,0 +1,176 @@
+/** 目录搬移：robocopy 复制 → 校验 → 建 junction 链接（原目录仍可正常访问） */
+import { spawn } from 'child_process'
+import { promises as fs } from 'fs'
+import { existsSync } from 'fs'
+import os from 'os'
+import path from 'path'
+import { deletePath, expand, runElevated, walkFiles, formatBytes } from './utils'
+import { MovePreset, MoveProgress, MoveResult } from '../../shared/types'
+
+const PRESETS: { name: string; path: string }[] = [
+  { name: '微信聊天记录', path: path.join(os.homedir(), 'Documents', 'WeChat Files') },
+  { name: '微信 4.0 数据', path: path.join(os.homedir(), 'Documents', 'xwechat_files') },
+  { name: 'QQ 文件与记录', path: path.join(os.homedir(), 'Documents', 'Tencent Files') },
+  { name: '企业微信数据', path: path.join(os.homedir(), 'Documents', 'WXWork') },
+  { name: '钉钉接收文件', path: path.join(os.homedir(), 'Documents', 'DingTalk') }
+]
+
+/** 列出常见的可搬移目录（存在的才返回占用大小） */
+export async function listPresets(): Promise<MovePreset[]> {
+  const out: MovePreset[] = []
+  for (const p of PRESETS) {
+    const abs = expand(p.path)
+    if (!existsSync(abs)) continue
+    out.push({ name: p.name, path: abs, exists: true, bytes: await measure(abs) })
+  }
+  return out
+}
+
+/** 统计目录大小（字节） */
+export async function dirSize(dir: string): Promise<number> {
+  return measure(dir)
+}
+
+async function measure(dir: string): Promise<number> {
+  let bytes = 0
+  await walkFiles(dir, (_f, size) => {
+    bytes += size
+  })
+  return bytes
+}
+
+async function countFiles(dir: string): Promise<{ files: number; bytes: number }> {
+  const st = { files: 0, bytes: 0 }
+  await walkFiles(dir, (_f, size) => {
+    st.files++
+    st.bytes += size
+  })
+  return st
+}
+
+/** 默认目标目录：盘符:\\SurperCleanMove\\<目录名> */
+export function defaultTarget(src: string, drive: string): string {
+  const letter = drive.replace(/:.*$/, '').toUpperCase()
+  return path.join(`${letter}:`, 'SurperCleanMove', path.basename(src))
+}
+
+/** 可用盘符（本机固定磁盘） */
+export async function listDrives(): Promise<string[]> {
+  const drives: string[] = []
+  for (const letter of 'CDEFGHIJKLMNOPQRSTUVWXYZ') {
+    const root = `${letter}:\\`
+    if (!existsSync(root)) continue
+    try {
+      const st = await fs.statfs(root)
+      if (st.blocks > 0) drives.push(`${letter}:`)
+    } catch {
+      /* 光驱/未就绪盘跳过 */
+    }
+  }
+  return drives
+}
+
+/** 执行搬移：复制、比对、建链接，任一步失败自动回滚 */
+export async function moveDirectory(
+  srcRaw: string,
+  destRaw: string,
+  onProgress?: (p: MoveProgress) => void
+): Promise<MoveResult> {
+  const src = path.resolve(expand(srcRaw))
+  const dest = path.resolve(expand(destRaw))
+  const st = await fs.lstat(src).catch(() => null)
+  if (!st?.isDirectory()) return { ok: false, message: '源目录不存在或不是文件夹' }
+  if (existsSync(dest)) return { ok: false, message: '目标位置已存在同名文件夹，请更换' }
+  if (dest.toLowerCase().startsWith(src.toLowerCase() + path.sep)) {
+    return { ok: false, message: '目标目录不能放在源目录内部' }
+  }
+
+  const srcStat = await countFiles(src)
+  if (srcStat.files === 0) return { ok: false, message: '源目录为空，无需搬移' }
+
+  // 目标盘剩余空间检查
+  try {
+    const fsStat = await fs.statfs(path.dirname(dest))
+    const free = Number(fsStat.bavail) * Number(fsStat.bsize)
+    if (free < srcStat.bytes * 1.05) {
+      return { ok: false, message: `目标盘空间不足：需要 ${formatBytes(srcStat.bytes)}，可用 ${formatBytes(free)}` }
+    }
+  } catch {
+    await fs.mkdir(path.dirname(dest), { recursive: true }).catch(() => null)
+  }
+
+  onProgress?.({ phase: '正在复制文件…', percent: 0 })
+  const copyCode = await robocopy(src, dest, onProgress)
+  if (copyCode >= 8) {
+    await deletePath(dest).catch(() => null)
+    return { ok: false, message: `复制失败（robocopy 退出码 ${copyCode}），请关闭正在使用该目录的程序后重试` }
+  }
+
+  onProgress?.({ phase: '校验文件完整性…', percent: 99 })
+  const dstStat = await countFiles(dest)
+  if (dstStat.files !== srcStat.files || dstStat.bytes !== srcStat.bytes) {
+    await deletePath(dest).catch(() => null)
+    return {
+      ok: false,
+      message: `校验失败（源 ${srcStat.files} 个文件 / ${formatBytes(srcStat.bytes)}，目标 ${dstStat.files} 个文件 / ${formatBytes(dstStat.bytes)}），已回滚`
+    }
+  }
+
+  onProgress?.({ phase: '正在创建目录链接…', percent: 99 })
+  const bak = path.join(path.dirname(src), `${path.basename(src)}.sc_bak_${Date.now()}`)
+  const script = `$ErrorActionPreference='Stop'
+$src='${esc(src)}'
+$bak='${esc(bak)}'
+$dst='${esc(dest)}'
+Rename-Item -LiteralPath $src -NewName '${esc(path.basename(bak))}'
+try {
+  New-Item -ItemType Junction -Path $src -Target $dst | Out-Null
+} catch {
+  Rename-Item -LiteralPath $bak -NewName '${esc(path.basename(src))}'
+  throw
+}
+try { Remove-Item -LiteralPath $bak -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+`
+  try {
+    await runElevated(script, 600000)
+  } catch (e) {
+    return { ok: false, message: `创建目录链接失败：${(e as Error).message}（数据已复制到 ${dest}）` }
+  }
+
+  if (existsSync(bak)) {
+    return {
+      ok: true,
+      message: `已搬移到 ${dest}，原目录已变为链接。有文件被占用，旧目录备份在 ${bak}，关闭相关程序后可手动删除`
+    }
+  }
+  onProgress?.({ phase: '完成', percent: 100 })
+  return { ok: true, message: `已搬移到 ${dest}，原目录已变为链接，软件无需任何改动` }
+}
+
+function esc(s: string): string {
+  return s.replace(/'/g, "''")
+}
+
+/** 调 robocopy，成功返回退出码（<8 表示成功） */
+function robocopy(src: string, dest: string, onProgress?: (p: MoveProgress) => void): Promise<number> {
+  return new Promise((resolveP) => {
+    const args = [src, dest, '/E', '/COPY:DAT', '/R:1', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS', '/NP', '/MT:8']
+    const proc = spawn('robocopy.exe', args, { windowsHide: true })
+    let lastPct = 0
+    const onData = (d: Buffer): void => {
+      const text = d.toString()
+      const matches = text.match(/(\d{1,3})%/g)
+      if (matches) {
+        const pct = Math.min(99, parseInt(matches[matches.length - 1], 10))
+        if (pct > lastPct) {
+          lastPct = pct
+          onProgress?.({ phase: '正在复制文件…', percent: pct })
+        }
+      }
+    }
+    proc.stdout.on('data', onData)
+    proc.stderr.on('data', () => undefined)
+    proc.on('close', (code) => resolveP(code ?? 16))
+    proc.on('error', () => resolveP(16))
+  })
+}

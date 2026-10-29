@@ -4,13 +4,19 @@ import Junk from './pages/Junk'
 import Startup from './pages/Startup'
 import Privacy from './pages/Privacy'
 import Files from './pages/Files'
+import Uninstall from './pages/Uninstall'
+import Move from './pages/Move'
+import Schedule from './pages/Schedule'
 
 const NAV = [
   { key: 'home', label: '首页' },
   { key: 'junk', label: '垃圾清理' },
   { key: 'startup', label: '电脑加速' },
   { key: 'privacy', label: '隐私清理' },
-  { key: 'files', label: '大文件/重复' }
+  { key: 'files', label: '大文件/重复' },
+  { key: 'uninstall', label: '软件卸载' },
+  { key: 'move', label: '目录搬移' },
+  { key: 'schedule', label: '定时清理' }
 ] as const
 
 type PageKey = (typeof NAV)[number]['key']
@@ -43,6 +49,9 @@ export default function App(): React.JSX.Element {
         {page === 'startup' && <Startup />}
         {page === 'privacy' && <Privacy />}
         {page === 'files' && <Files />}
+        {page === 'uninstall' && <Uninstall />}
+        {page === 'move' && <Move />}
+        {page === 'schedule' && <Schedule />}
       </main>
     </div>
   )

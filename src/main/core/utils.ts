@@ -184,12 +184,13 @@ export async function walkFiles(
   }
 }
 
-/** 执行 PowerShell 并返回 stdout */
+/** 执行 PowerShell 并返回 stdout（强制 UTF-8 输出，避免中文乱码） */
 export function runPowerShell(script: string, timeoutMs = 60000): Promise<string> {
+  const full = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\r\n${script}`
   return new Promise((resolveP, rejectP) => {
     const proc = spawn(
       'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', full],
       { windowsHide: true }
     )
     let out = ''
@@ -213,7 +214,8 @@ export function runPowerShell(script: string, timeoutMs = 60000): Promise<string
 export function runElevated(script: string, timeoutMs = 300000): Promise<number> {
   return new Promise((resolveP, rejectP) => {
     const file = path.join(os.tmpdir(), `surperclean-admin-${Date.now()}.ps1`)
-    require('fs').writeFileSync(file, script, 'utf8')
+    // 带 BOM 保存，PowerShell 才能正确识别中文路径
+    require('fs').writeFileSync(file, '\ufeff' + script, 'utf8')
     const cmd = [
       'powershell.exe',
       '-NoProfile',

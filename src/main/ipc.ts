@@ -4,7 +4,10 @@ import { scanJunk, cleanJunk, JUNK_IDS } from './core/junk'
 import { scanPrivacy, cleanPrivacy } from './core/privacy'
 import { listStartup, toggleStartup, listProcesses, killProcess } from './core/startup'
 import { findBigFiles, findDuplicates, deleteFiles, DEFAULT_BIG_ROOTS } from './core/files'
-import { AppInfo } from '../shared/types'
+import { listApps, uninstallApp, scanLeftovers, cleanLeftovers } from './core/uninstall'
+import { listPresets, listDrives, dirSize, defaultTarget, moveDirectory } from './core/move'
+import { getScheduleStatus, saveSchedule, runAutoClean } from './core/schedule'
+import { AppInfo, UninstallItem, LeftoverItem, ScheduleConfig } from '../shared/types'
 
 function push(channel: string, payload: unknown): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -49,4 +52,26 @@ export function registerIpc(): void {
       findDuplicates(root, (scanned) => push('files:dup-progress', scanned))
   )
   ipcMain.handle('files:delete', (_e, paths: string[]) => deleteFiles(paths))
+
+  // ── 软件卸载 ──
+  ipcMain.handle('uninstall:list', () => listApps())
+  ipcMain.handle('uninstall:remove', (_e, appItem: UninstallItem) => uninstallApp(appItem))
+  ipcMain.handle('uninstall:leftovers', (_e, appItem: UninstallItem) => scanLeftovers(appItem))
+  ipcMain.handle('uninstall:cleanLeftovers', (_e, items: LeftoverItem[]) => cleanLeftovers(items))
+
+  // ── 目录搬移 ──
+  ipcMain.handle('move:presets', () => listPresets())
+  ipcMain.handle('move:drives', () => listDrives())
+  ipcMain.handle('move:size', (_e, dir: string) => dirSize(dir))
+  ipcMain.handle('move:defaultTarget', (_e, src: string, drive: string) => defaultTarget(src, drive))
+  ipcMain.handle(
+    'move:run',
+    (_e, src: string, dest: string) =>
+      moveDirectory(src, dest, (p) => push('move:progress', p))
+  )
+
+  // ── 定时清理 ──
+  ipcMain.handle('schedule:get', () => getScheduleStatus())
+  ipcMain.handle('schedule:save', (_e, cfg: ScheduleConfig) => saveSchedule(cfg))
+  ipcMain.handle('schedule:runNow', () => runAutoClean())
 }
