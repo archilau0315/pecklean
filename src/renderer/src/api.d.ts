@@ -15,7 +15,8 @@ import type {
   MoveProgress,
   MoveResult,
   ScheduleConfig,
-  ScheduleStatus
+  ScheduleStatus,
+  Lang
 } from '../../shared/types'
 
 interface Api {
@@ -28,9 +29,9 @@ interface Api {
   privacyScan(): Promise<PrivacyItem[]>
   privacyClean(ids: string[]): Promise<CleanResult>
   startupList(): Promise<StartupItem[]>
-  startupToggle(id: string, enable: boolean): Promise<{ ok: boolean; message: string }>
+  startupToggle(id: string, enable: boolean, lang: Lang): Promise<{ ok: boolean; message: string }>
   processList(): Promise<ProcessItem[]>
-  processKill(pid: number): Promise<{ ok: boolean; message: string }>
+  processKill(pid: number, lang: Lang): Promise<{ ok: boolean; message: string }>
   bigRoots(): Promise<string[]>
   findBig(roots: string[], minMB: number): Promise<BigFileItem[]>
   findDup(root: string): Promise<DuplicateGroup[]>
@@ -38,18 +39,18 @@ interface Api {
   onBigProgress(cb: (p: string) => void): () => void
   onDupProgress(cb: (p: number) => void): () => void
   uninstallList(): Promise<UninstallItem[]>
-  uninstallRemove(item: UninstallItem): Promise<{ ok: boolean; message: string }>
+  uninstallRemove(item: UninstallItem, lang: Lang): Promise<{ ok: boolean; message: string }>
   uninstallLeftovers(item: UninstallItem): Promise<LeftoverReport>
   cleanLeftovers(items: LeftoverItem[]): Promise<{ ok: number; bytes: number; errors: string[] }>
   movePresets(): Promise<MovePreset[]>
   moveDrives(): Promise<string[]>
   moveSize(dir: string): Promise<number>
   moveDefaultTarget(src: string, drive: string): Promise<string>
-  moveRun(src: string, dest: string): Promise<MoveResult>
+  moveRun(src: string, dest: string, lang: Lang): Promise<MoveResult>
   onMoveProgress(cb: (p: MoveProgress) => void): () => void
   scheduleGet(): Promise<ScheduleStatus>
-  scheduleSave(cfg: ScheduleConfig): Promise<ScheduleStatus>
-  scheduleRunNow(): Promise<CleanResult>
+  scheduleSave(cfg: ScheduleConfig, lang: Lang): Promise<ScheduleStatus>
+  scheduleRunNow(lang: Lang): Promise<CleanResult>
 }
 
 declare global {

@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { formatBytes } from './fmt'
+import { useI18n } from '../i18n'
+import { movePresetName } from '../i18n/helpers'
 import type { MovePreset, MoveProgress } from '../../../shared/types'
 
 export default function Move(): React.JSX.Element {
+  const { t, lang } = useI18n()
   const [presets, setPresets] = useState<MovePreset[]>([])
   const [drives, setDrives] = useState<string[]>([])
   const [src, setSrc] = useState('')
@@ -50,7 +53,7 @@ export default function Move(): React.JSX.Element {
 
   // 系统文件夹选择框：原目录与新位置都可直接在资源管理器里点选
   const pickSrc = async (): Promise<void> => {
-    const p = await window.api.pickFolder({ title: '选择要搬移的目录' })
+    const p = await window.api.pickFolder({ title: t('move.pickSrc') })
     if (p) {
       setSrc(p)
       setManualDest(false)
@@ -58,7 +61,7 @@ export default function Move(): React.JSX.Element {
   }
 
   const pickDest = async (): Promise<void> => {
-    const p = await window.api.pickFolder({ title: '选择新的存放位置', defaultPath: dest || undefined })
+    const p = await window.api.pickFolder({ title: t('move.pickDest'), defaultPath: dest || undefined })
     if (p) {
       setDest(p)
       setManualDest(true)
@@ -67,14 +70,14 @@ export default function Move(): React.JSX.Element {
 
   const start = async (): Promise<void> => {
     if (!src.trim() || !dest.trim()) return
-    if (!confirm(`将把\n${src}\n搬移到\n${dest}\n\n原目录会变成一个链接，软件照常使用。继续？`)) return
+    if (!confirm(t('move.confirm', { src, dest }))) return
     setBusy(true)
     setMsg('')
     setFailed(false)
-    setProgress({ phase: '准备中…', percent: 0 })
+    setProgress({ phase: t('move.preparing'), percent: 0 })
     const off = window.api.onMoveProgress(setProgress)
     try {
-      const r = await window.api.moveRun(src.trim(), dest.trim())
+      const r = await window.api.moveRun(src.trim(), dest.trim(), lang)
       setMsg(r.message)
       setFailed(!r.ok)
       if (r.ok) setSrc('')
@@ -88,18 +91,18 @@ export default function Move(): React.JSX.Element {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>目录搬移</h1>
-        <span className="muted small">把占空间的目录搬到别的盘，原位置自动建链接</span>
+        <h1>{t('move.title')}</h1>
+        <span className="muted small">{t('move.subtitle')}</span>
       </div>
       {msg && <div className={`result-box ${failed ? 'warn' : ''}`}>{msg}</div>}
 
       {presets.length > 0 && (
         <div className="category">
-          <div className="category-title">常用目录（点击填入）</div>
+          <div className="category-title">{t('move.presets')}</div>
           <div className="preset-row">
             {presets.map((p) => (
               <button key={p.path} className={`chip ${src === p.path ? 'active' : ''}`} onClick={() => setSrc(p.path)} title={p.path}>
-                {p.name} · {formatBytes(p.bytes)}
+                {movePresetName(t, p)} · {formatBytes(p.bytes)}
               </button>
             ))}
           </div>
@@ -107,12 +110,12 @@ export default function Move(): React.JSX.Element {
       )}
 
       <div className="category">
-        <div className="category-title">搬移设置</div>
+        <div className="category-title">{t('move.settings')}</div>
         <div className="form-row">
-          <span className="form-label">原目录</span>
+          <span className="form-label">{t('move.src')}</span>
           <input
             className="text-input grow"
-            placeholder="要搬走的文件夹，点右侧「选择」也可以"
+            placeholder={t('move.srcPlaceholder')}
             value={src}
             onChange={(e) => {
               setSrc(e.target.value)
@@ -121,11 +124,11 @@ export default function Move(): React.JSX.Element {
             disabled={busy}
           />
           <button className="btn" onClick={pickSrc} disabled={busy}>
-            选择
+            {t('move.choose')}
           </button>
         </div>
         <div className="form-row">
-          <span className="form-label">目标盘</span>
+          <span className="form-label">{t('move.drive')}</span>
           <div className="preset-row">
             {drives.map((d) => (
               <button
@@ -140,10 +143,10 @@ export default function Move(): React.JSX.Element {
           </div>
         </div>
         <div className="form-row">
-          <span className="form-label">新位置</span>
+          <span className="form-label">{t('move.dest')}</span>
           <input
             className="text-input grow"
-            placeholder="新的存放目录，点右侧「选择」也可以"
+            placeholder={t('move.destPlaceholder')}
             value={dest}
             onChange={(e) => {
               setDest(e.target.value)
@@ -152,10 +155,10 @@ export default function Move(): React.JSX.Element {
             disabled={busy}
           />
           <button className="btn" onClick={pickDest} disabled={busy}>
-            选择
+            {t('move.choose')}
           </button>
         </div>
-        {src && size > 0 && <div className="muted small">目录大小 {formatBytes(size)}，复制时请勿关闭相关软件</div>}
+        {src && size > 0 && <div className="muted small">{t('move.sizeHint', { size: formatBytes(size) })}</div>}
 
         {progress && (
           <div className="progressbar">
@@ -168,18 +171,18 @@ export default function Move(): React.JSX.Element {
 
         <div className="actions" style={{ marginTop: 14 }}>
           <button className="btn primary" onClick={start} disabled={busy || !src.trim() || !dest.trim()}>
-            {busy ? '搬移中…' : '开始搬移'}
+            {busy ? t('move.busy') : t('move.start')}
           </button>
         </div>
       </div>
 
       <div className="tip-box">
-        <b>工作原理</b>
+        <b>{t('move.tip.title')}</b>
         <ul>
-          <li>先把文件完整复制到新位置并逐个校验，确保一个字节都不丢</li>
-          <li>校验通过后删除原目录，在原位置建立 Junction 链接，路径不变、软件无感</li>
-          <li>任一步失败会自动回滚，不会出现「文件搬一半」的情况</li>
-          <li>搬移前请先退出微信 / QQ 等正在读写该目录的程序</li>
+          <li>{t('move.tip.1')}</li>
+          <li>{t('move.tip.2')}</li>
+          <li>{t('move.tip.3')}</li>
+          <li>{t('move.tip.4')}</li>
         </ul>
       </div>
     </div>

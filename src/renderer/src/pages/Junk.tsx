@@ -1,8 +1,11 @@
 import { useState } from 'react'
 import { formatBytes } from './fmt'
-import type { ScanItem, CleanResult } from '../../../shared/types'
+import { useI18n } from '../i18n'
+import { junkCategory, junkRuleName, junkProgress } from '../i18n/helpers'
+import type { ScanItem, CleanResult, ScanProgress } from '../../../shared/types'
 
 export default function Junk(): React.JSX.Element {
+  const { t } = useI18n()
   const [items, setItems] = useState<ScanItem[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [scanning, setScanning] = useState(false)
@@ -14,7 +17,9 @@ export default function Junk(): React.JSX.Element {
     setScanning(true)
     setResult(null)
     setItems([])
-    const off = window.api.onJunkScanProgress((p) => setProgress(`${p.current} (${p.done + 1}/${p.total})`))
+    const off = window.api.onJunkScanProgress((p: ScanProgress) =>
+      setProgress(`${junkProgress(t, p)} (${p.done + 1}/${p.total})`)
+    )
     try {
       const res = await window.api.junkScan(null)
       setItems(res)
@@ -30,7 +35,7 @@ export default function Junk(): React.JSX.Element {
   const clean = async (): Promise<void> => {
     if (!selected.size) return
     const adminCount = items.filter((i) => selected.has(i.id) && i.admin).length
-    if (adminCount > 0 && !confirm(`包含 ${adminCount} 个系统级清理项，将弹出 UAC 提权窗口，继续？`)) return
+    if (adminCount > 0 && !confirm(t('junk.uacConfirm', { n: adminCount }))) return
     setCleaning(true)
     try {
       const res = await window.api.junkClean([...selected])
@@ -58,31 +63,36 @@ export default function Junk(): React.JSX.Element {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>垃圾清理</h1>
+        <h1>{t('junk.title')}</h1>
         <div className="actions">
           <button className="btn" onClick={scan} disabled={scanning || cleaning}>
-            {scanning ? '扫描中…' : items.length ? '重新扫描' : '开始扫描'}
+            {scanning ? t('junk.scanning') : items.length ? t('junk.rescan') : t('junk.scan')}
           </button>
           <button className="btn primary" onClick={clean} disabled={cleaning || scanning || !selected.size}>
-            {cleaning ? '清理中…' : `一键清理${selected.size ? ` (${formatBytes(totalSelected)})` : ''}`}
+            {cleaning
+              ? t('junk.cleaning')
+              : `${t('junk.clean')}${selected.size ? ` (${formatBytes(totalSelected)})` : ''}`}
           </button>
         </div>
       </div>
-      {scanning && <div className="progress-line">{progress || '正在扫描…'}</div>}
+      {scanning && <div className="progress-line">{progress || t('junk.scanningHint')}</div>}
       {result && (
         <div className={`result-box ${result.errors.length ? 'warn' : ''}`}>
-          已清理 {result.files} 项，释放 {formatBytes(result.bytes)}
-          {result.errors.length > 0 && <div className="errors">跳过 {result.errors.length} 个被占用的文件（正常现象）</div>}
+          {t('junk.result', { files: result.files, size: formatBytes(result.bytes) })}
+          {result.errors.length > 0 && (
+            <div className="errors">{t('junk.result.errors', { n: result.errors.length })}</div>
+          )}
         </div>
       )}
       {items.length > 0 && (
         <div className="scan-summary">
-          共发现 <b>{formatBytes(totalAll)}</b> 可清理空间，已勾选 <b>{formatBytes(totalSelected)}</b>
+          {t('junk.summary.before')} <b>{formatBytes(totalAll)}</b> {t('junk.summary.after')}{' '}
+          <b>{formatBytes(totalSelected)}</b>
         </div>
       )}
       {categories.map((cat) => (
         <div key={cat} className="category">
-          <div className="category-title">{cat}</div>
+          <div className="category-title">{junkCategory(t, cat)}</div>
           {items
             .filter((i) => i.category === cat)
             .map((i) => (
@@ -94,22 +104,19 @@ export default function Junk(): React.JSX.Element {
                   disabled={i.bytes === 0}
                 />
                 <span className="item-name">
-                  {i.name}
+                  {junkRuleName(t, i.id, i.name)}
                   {i.admin && <span className="badge admin">UAC</span>}
                 </span>
                 <span className="item-samples" title={i.samples.join('\n')}>
-                  {i.samples[0] ?? (i.id === 'recyclebin' ? '清空回收站' : i.samples.length ? '' : '未发现')}
+                  {i.samples[0] ??
+                    (i.id === 'recyclebin' ? t('junk.recyclebinAction') : i.samples.length ? '' : t('junk.notFound'))}
                 </span>
-                <span className="item-size">
-                  {i.files} 项 · {formatBytes(i.bytes)}
-                </span>
+                <span className="item-size">{t('junk.item.size', { files: i.files, size: formatBytes(i.bytes) })}</span>
               </label>
             ))}
         </div>
       ))}
-      {!scanning && items.length === 0 && (
-        <div className="empty-state">点击「开始扫描」查找可清理的垃圾文件</div>
-      )}
+      {!scanning && items.length === 0 && <div className="empty-state">{t('junk.empty')}</div>}
     </div>
   )
 }

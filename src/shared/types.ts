@@ -1,5 +1,8 @@
 /** 主进程/渲染进程共享类型 */
 
+/** 界面语言：渲染层传给主进程用于选择双语消息 */
+export type Lang = 'zh' | 'en'
+
 export interface ScanItem {
   id: string
   name: string
@@ -13,6 +16,8 @@ export interface ScanItem {
 
 export interface ScanProgress {
   current: string
+  /** 当前项的稳定 id（规则 id / recyclebin / done），供渲染层翻译 */
+  id?: string
   done: number
   total: number
 }
@@ -93,6 +98,8 @@ export interface LeftoverReport {
 }
 
 export interface MovePreset {
+  /** 稳定 id，供渲染层翻译名称 */
+  id: string
   name: string
   path: string
   exists: boolean

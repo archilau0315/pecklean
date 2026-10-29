@@ -5,14 +5,15 @@ import { existsSync } from 'fs'
 import os from 'os'
 import path from 'path'
 import { deletePath, expand, runElevated, walkFiles, formatBytes } from './utils'
-import { MovePreset, MoveProgress, MoveResult } from '../../shared/types'
+import { pick } from '../lang'
+import { MovePreset, MoveProgress, MoveResult, Lang } from '../../shared/types'
 
-const PRESETS: { name: string; path: string }[] = [
-  { name: '微信聊天记录', path: path.join(os.homedir(), 'Documents', 'WeChat Files') },
-  { name: '微信 4.0 数据', path: path.join(os.homedir(), 'Documents', 'xwechat_files') },
-  { name: 'QQ 文件与记录', path: path.join(os.homedir(), 'Documents', 'Tencent Files') },
-  { name: '企业微信数据', path: path.join(os.homedir(), 'Documents', 'WXWork') },
-  { name: '钉钉接收文件', path: path.join(os.homedir(), 'Documents', 'DingTalk') }
+const PRESETS: { id: string; name: string; path: string }[] = [
+  { id: 'wechat', name: '微信聊天记录', path: path.join(os.homedir(), 'Documents', 'WeChat Files') },
+  { id: 'wechat4', name: '微信 4.0 数据', path: path.join(os.homedir(), 'Documents', 'xwechat_files') },
+  { id: 'qq', name: 'QQ 文件与记录', path: path.join(os.homedir(), 'Documents', 'Tencent Files') },
+  { id: 'wxwork', name: '企业微信数据', path: path.join(os.homedir(), 'Documents', 'WXWork') },
+  { id: 'dingtalk', name: '钉钉接收文件', path: path.join(os.homedir(), 'Documents', 'DingTalk') }
 ]
 
 /** 列出常见的可搬移目录（存在的才返回占用大小） */
@@ -21,7 +22,7 @@ export async function listPresets(): Promise<MovePreset[]> {
   for (const p of PRESETS) {
     const abs = expand(p.path)
     if (!existsSync(abs)) continue
-    out.push({ name: p.name, path: abs, exists: true, bytes: await measure(abs) })
+    out.push({ id: p.id, name: p.name, path: abs, exists: true, bytes: await measure(abs) })
   }
   return out
 }
@@ -74,49 +75,77 @@ export async function listDrives(): Promise<string[]> {
 export async function moveDirectory(
   srcRaw: string,
   destRaw: string,
-  onProgress?: (p: MoveProgress) => void
+  onProgress?: (p: MoveProgress) => void,
+  lang: Lang = 'zh'
 ): Promise<MoveResult> {
   const src = path.resolve(expand(srcRaw))
   const dest = path.resolve(expand(destRaw))
   const st = await fs.lstat(src).catch(() => null)
-  if (!st?.isDirectory()) return { ok: false, message: '源目录不存在或不是文件夹' }
-  if (existsSync(dest)) return { ok: false, message: '目标位置已存在同名文件夹，请更换' }
+  if (!st?.isDirectory()) {
+    return { ok: false, message: pick(lang, '源目录不存在或不是文件夹', 'Source folder does not exist or is not a folder') }
+  }
+  if (existsSync(dest)) {
+    return {
+      ok: false,
+      message: pick(lang, '目标位置已存在同名文件夹，请更换', 'A folder with the same name already exists at the destination')
+    }
+  }
   if (dest.toLowerCase().startsWith(src.toLowerCase() + path.sep)) {
-    return { ok: false, message: '目标目录不能放在源目录内部' }
+    return { ok: false, message: pick(lang, '目标目录不能放在源目录内部', 'Destination cannot be inside the source folder') }
   }
 
   const srcStat = await countFiles(src)
-  if (srcStat.files === 0) return { ok: false, message: '源目录为空，无需搬移' }
+  if (srcStat.files === 0) {
+    return { ok: false, message: pick(lang, '源目录为空，无需搬移', 'Source folder is empty, nothing to move') }
+  }
 
   // 目标盘剩余空间检查
   try {
     const fsStat = await fs.statfs(path.dirname(dest))
     const free = Number(fsStat.bavail) * Number(fsStat.bsize)
     if (free < srcStat.bytes * 1.05) {
-      return { ok: false, message: `目标盘空间不足：需要 ${formatBytes(srcStat.bytes)}，可用 ${formatBytes(free)}` }
+      return {
+        ok: false,
+        message: pick(
+          lang,
+          `目标盘空间不足：需要 ${formatBytes(srcStat.bytes)}，可用 ${formatBytes(free)}`,
+          `Not enough space on the target drive: need ${formatBytes(srcStat.bytes)}, available ${formatBytes(free)}`
+        )
+      }
     }
   } catch {
     await fs.mkdir(path.dirname(dest), { recursive: true }).catch(() => null)
   }
 
-  onProgress?.({ phase: '正在复制文件…', percent: 0 })
-  const copyCode = await robocopy(src, dest, onProgress)
+  onProgress?.({ phase: pick(lang, '正在复制文件…', 'Copying files…'), percent: 0 })
+  const copyCode = await robocopy(src, dest, onProgress, lang)
   if (copyCode >= 8) {
     await deletePath(dest).catch(() => null)
-    return { ok: false, message: `复制失败（robocopy 退出码 ${copyCode}），请关闭正在使用该目录的程序后重试` }
+    return {
+      ok: false,
+      message: pick(
+        lang,
+        `复制失败（robocopy 退出码 ${copyCode}），请关闭正在使用该目录的程序后重试`,
+        `Copy failed (robocopy exit code ${copyCode}). Close apps using this folder and try again`
+      )
+    }
   }
 
-  onProgress?.({ phase: '校验文件完整性…', percent: 99 })
+  onProgress?.({ phase: pick(lang, '校验文件完整性…', 'Verifying files…'), percent: 99 })
   const dstStat = await countFiles(dest)
   if (dstStat.files !== srcStat.files || dstStat.bytes !== srcStat.bytes) {
     await deletePath(dest).catch(() => null)
     return {
       ok: false,
-      message: `校验失败（源 ${srcStat.files} 个文件 / ${formatBytes(srcStat.bytes)}，目标 ${dstStat.files} 个文件 / ${formatBytes(dstStat.bytes)}），已回滚`
+      message: pick(
+        lang,
+        `校验失败（源 ${srcStat.files} 个文件 / ${formatBytes(srcStat.bytes)}，目标 ${dstStat.files} 个文件 / ${formatBytes(dstStat.bytes)}），已回滚`,
+        `Verification failed (source ${srcStat.files} files / ${formatBytes(srcStat.bytes)}, target ${dstStat.files} files / ${formatBytes(dstStat.bytes)}), rolled back`
+      )
     }
   }
 
-  onProgress?.({ phase: '正在创建目录链接…', percent: 99 })
+  onProgress?.({ phase: pick(lang, '正在创建目录链接…', 'Creating folder link…'), percent: 99 })
   const bak = path.join(path.dirname(src), `${path.basename(src)}.sc_bak_${Date.now()}`)
   const script = `$ErrorActionPreference='Stop'
 $src='${esc(src)}'
@@ -134,17 +163,35 @@ try { Remove-Item -LiteralPath $bak -Recurse -Force -ErrorAction SilentlyContinu
   try {
     await runElevated(script, 600000)
   } catch (e) {
-    return { ok: false, message: `创建目录链接失败：${(e as Error).message}（数据已复制到 ${dest}）` }
+    return {
+      ok: false,
+      message: pick(
+        lang,
+        `创建目录链接失败：${(e as Error).message}（数据已复制到 ${dest}）`,
+        `Failed to create the folder link: ${(e as Error).message} (data copied to ${dest})`
+      )
+    }
   }
 
   if (existsSync(bak)) {
     return {
       ok: true,
-      message: `已搬移到 ${dest}，原目录已变为链接。有文件被占用，旧目录备份在 ${bak}，关闭相关程序后可手动删除`
+      message: pick(
+        lang,
+        `已搬移到 ${dest}，原目录已变为链接。有文件被占用，旧目录备份在 ${bak}，关闭相关程序后可手动删除`,
+        `Moved to ${dest}; the original folder is now a link. Some files were in use, backup kept at ${bak} — delete it after closing the apps`
+      )
     }
   }
-  onProgress?.({ phase: '完成', percent: 100 })
-  return { ok: true, message: `已搬移到 ${dest}，原目录已变为链接，软件无需任何改动` }
+  onProgress?.({ phase: pick(lang, '完成', 'Done'), percent: 100 })
+  return {
+    ok: true,
+    message: pick(
+      lang,
+      `已搬移到 ${dest}，原目录已变为链接，软件无需任何改动`,
+      `Moved to ${dest}; the original folder is now a link and apps need no changes`
+    )
+  }
 }
 
 function esc(s: string): string {
@@ -152,7 +199,7 @@ function esc(s: string): string {
 }
 
 /** 调 robocopy，成功返回退出码（<8 表示成功） */
-function robocopy(src: string, dest: string, onProgress?: (p: MoveProgress) => void): Promise<number> {
+function robocopy(src: string, dest: string, onProgress?: (p: MoveProgress) => void, lang: Lang = 'zh'): Promise<number> {
   return new Promise((resolveP) => {
     const args = [src, dest, '/E', '/COPY:DAT', '/R:1', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS', '/NP', '/MT:8']
     const proc = spawn('robocopy.exe', args, { windowsHide: true })
@@ -164,7 +211,7 @@ function robocopy(src: string, dest: string, onProgress?: (p: MoveProgress) => v
         const pct = Math.min(99, parseInt(matches[matches.length - 1], 10))
         if (pct > lastPct) {
           lastPct = pct
-          onProgress?.({ phase: '正在复制文件…', percent: pct })
+          onProgress?.({ phase: pick(lang, '正在复制文件…', 'Copying files…'), percent: pct })
         }
       }
     }

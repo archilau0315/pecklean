@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { formatBytes } from './fmt'
+import { useI18n } from '../i18n'
+import { leftoverLabel } from '../i18n/helpers'
 import type { UninstallItem, LeftoverItem } from '../../../shared/types'
 
 export default function Uninstall(): React.JSX.Element {
+  const { t, lang } = useI18n()
   const [apps, setApps] = useState<UninstallItem[]>([])
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -27,10 +30,10 @@ export default function Uninstall(): React.JSX.Element {
   }, [])
 
   const remove = async (app: UninstallItem): Promise<void> => {
-    if (!confirm(`卸载 ${app.name}？\n将调用软件自带的卸载程序，可能需要 UAC 确认。`)) return
+    if (!confirm(t('uninstall.confirm', { name: app.name }))) return
     setBusyId(app.id)
     try {
-      const r = await window.api.uninstallRemove(app)
+      const r = await window.api.uninstallRemove(app, lang)
       setMsg(r.message)
       await load()
       await findLeftovers(app)
@@ -47,10 +50,10 @@ export default function Uninstall(): React.JSX.Element {
     try {
       const res = await window.api.uninstallLeftovers(app)
       setLeftovers(res.items)
-      if (res.items.length === 0) setMsg(`${app.name}：未发现残留`)
-      else if (res.installed) setMsg(`${app.name} 仍处于安装状态，下面列出的是它的正常文件，建议卸载后再清理`)
+      if (res.items.length === 0) setMsg(t('uninstall.noLeft', { name: app.name }))
+      else if (res.installed) setMsg(t('uninstall.stillInstalled', { name: app.name }))
       else {
-        setMsg(`发现 ${res.items.length} 项残留，已默认勾选`)
+        setMsg(t('uninstall.foundLeft', { n: res.items.length }))
         setChecked(new Set(res.items.map((r) => r.id)))
       }
     } finally {
@@ -60,9 +63,13 @@ export default function Uninstall(): React.JSX.Element {
 
   const cleanLeft = async (): Promise<void> => {
     const items = leftovers.filter((l) => checked.has(l.id))
-    if (!items.length || !confirm(`清理选中的 ${items.length} 项残留？不可恢复！`)) return
+    if (!items.length || !confirm(t('uninstall.confirmLeft', { n: items.length }))) return
     const r = await window.api.cleanLeftovers(items)
-    setMsg(`已清理 ${r.ok} 项残留${r.bytes ? `，释放 ${formatBytes(r.bytes)}` : ''}${r.errors.length ? `，${r.errors.length} 项失败` : ''}`)
+    setMsg(
+      t('uninstall.leftDone', { n: r.ok }) +
+        (r.bytes ? t('uninstall.leftDoneSize', { size: formatBytes(r.bytes) }) : '') +
+        (r.errors.length ? t('uninstall.leftDoneFail', { n: r.errors.length }) : '')
+    )
     setLeftovers((prev) => prev.filter((l) => !checked.has(l.id)))
     setChecked(new Set())
   }
@@ -83,10 +90,10 @@ export default function Uninstall(): React.JSX.Element {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>软件卸载</h1>
+        <h1>{t('uninstall.title')}</h1>
         <div className="actions">
           <button className="btn" onClick={load} disabled={loading || !!busyId}>
-            {loading ? '读取中…' : '刷新列表'}
+            {loading ? t('uninstall.loading') : t('uninstall.refresh')}
           </button>
         </div>
       </div>
@@ -94,13 +101,13 @@ export default function Uninstall(): React.JSX.Element {
       <div className="filter-row">
         <input
           className="text-input grow"
-          placeholder="搜索软件名称或厂商"
+          placeholder={t('uninstall.search')}
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
         />
-        <span className="muted small">共 {apps.length} 个软件</span>
+        <span className="muted small">{t('uninstall.total', { n: apps.length })}</span>
       </div>
-      {loading && <div className="progress-line">正在读取注册表…</div>}
+      {loading && <div className="progress-line">{t('uninstall.reading')}</div>}
 
       {!loading && (
         <div className="category">
@@ -108,43 +115,43 @@ export default function Uninstall(): React.JSX.Element {
             <div key={a.id} className="item-row">
               <span className="item-name">{a.name}</span>
               <span className="item-samples" title={`${a.publisher} ${a.installLocation}`}>
-                {a.version || '未知版本'}
+                {a.version || t('uninstall.version.unknown')}
                 {a.publisher ? ` · ${a.publisher}` : ''}
               </span>
               <span className="item-size">{a.sizeKB ? formatBytes(a.sizeKB * 1024) : '-'}</span>
               <button className="btn small" onClick={() => findLeftovers(a)}>
-                扫描残留
+                {t('uninstall.scanLeft')}
               </button>
               <button className="btn small danger" onClick={() => remove(a)} disabled={!!busyId}>
-                {busyId === a.id ? '卸载中…' : '卸载'}
+                {busyId === a.id ? t('uninstall.removing') : t('uninstall.remove')}
               </button>
             </div>
           ))}
-          {shown.length === 0 && <div className="empty-state">没有匹配的软件</div>}
+          {shown.length === 0 && <div className="empty-state">{t('uninstall.empty')}</div>}
         </div>
       )}
 
       {leftApp && (
         <div className="category">
           <div className="page-head">
-            <div className="category-title">{leftApp.name} 的残留项</div>
+            <div className="category-title">{t('uninstall.leftTitle', { name: leftApp.name })}</div>
             <button className="btn small primary" onClick={cleanLeft} disabled={scanning || !checked.size}>
-              清理选中 ({checked.size})
+              {t('uninstall.leftClean', { n: checked.size })}
             </button>
           </div>
-          {scanning && <div className="progress-line">正在扫描注册表、安装目录与快捷方式…</div>}
+          {scanning && <div className="progress-line">{t('uninstall.leftScanning')}</div>}
           {!scanning &&
             leftovers.map((l) => (
               <label key={l.id} className="item-row">
                 <input type="checkbox" checked={checked.has(l.id)} onChange={() => toggle(l.id)} />
-                <span className="item-name">{l.desc}</span>
+                <span className="item-name">{leftoverLabel(t, l)}</span>
                 <span className="item-samples" title={l.path}>
                   {l.path}
                 </span>
                 <span className="item-size">{l.bytes ? formatBytes(l.bytes) : '-'}</span>
               </label>
             ))}
-          {!scanning && leftovers.length === 0 && <div className="empty-state">未发现残留项</div>}
+          {!scanning && leftovers.length === 0 && <div className="empty-state">{t('uninstall.leftEmpty')}</div>}
         </div>
       )}
     </div>

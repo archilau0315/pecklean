@@ -16,9 +16,9 @@ const api = {
   privacyClean: (ids: string[]) => ipcRenderer.invoke('privacy:clean', ids),
 
   startupList: () => ipcRenderer.invoke('startup:list'),
-  startupToggle: (id: string, enable: boolean) => ipcRenderer.invoke('startup:toggle', id, enable),
+  startupToggle: (id: string, enable: boolean, lang: string) => ipcRenderer.invoke('startup:toggle', id, enable, lang),
   processList: () => ipcRenderer.invoke('process:list'),
-  processKill: (pid: number) => ipcRenderer.invoke('process:kill', pid),
+  processKill: (pid: number, lang: string) => ipcRenderer.invoke('process:kill', pid, lang),
 
   bigRoots: () => ipcRenderer.invoke('files:bigRoots'),
   findBig: (roots: string[], minMB: number) => ipcRenderer.invoke('files:big', roots, minMB),
@@ -36,7 +36,7 @@ const api = {
   },
 
   uninstallList: () => ipcRenderer.invoke('uninstall:list'),
-  uninstallRemove: (item: unknown) => ipcRenderer.invoke('uninstall:remove', item),
+  uninstallRemove: (item: unknown, lang: string) => ipcRenderer.invoke('uninstall:remove', item, lang),
   uninstallLeftovers: (item: unknown) => ipcRenderer.invoke('uninstall:leftovers', item),
   cleanLeftovers: (items: unknown[]) => ipcRenderer.invoke('uninstall:cleanLeftovers', items),
 
@@ -44,7 +44,7 @@ const api = {
   moveDrives: () => ipcRenderer.invoke('move:drives'),
   moveSize: (dir: string) => ipcRenderer.invoke('move:size', dir),
   moveDefaultTarget: (src: string, drive: string) => ipcRenderer.invoke('move:defaultTarget', src, drive),
-  moveRun: (src: string, dest: string) => ipcRenderer.invoke('move:run', src, dest),
+  moveRun: (src: string, dest: string, lang: string) => ipcRenderer.invoke('move:run', src, dest, lang),
   onMoveProgress: (cb: (p: unknown) => void) => {
     const fn = (_e: unknown, p: unknown): void => cb(p)
     ipcRenderer.on('move:progress', fn)
@@ -52,8 +52,8 @@ const api = {
   },
 
   scheduleGet: () => ipcRenderer.invoke('schedule:get'),
-  scheduleSave: (cfg: unknown) => ipcRenderer.invoke('schedule:save', cfg),
-  scheduleRunNow: () => ipcRenderer.invoke('schedule:runNow')
+  scheduleSave: (cfg: unknown, lang: string) => ipcRenderer.invoke('schedule:save', cfg, lang),
+  scheduleRunNow: (lang: string) => ipcRenderer.invoke('schedule:runNow', lang)
 }
 
 contextBridge.exposeInMainWorld('api', api)

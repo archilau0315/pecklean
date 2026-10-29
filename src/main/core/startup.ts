@@ -3,7 +3,8 @@ import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
 import path from 'path'
 import { runPowerShell, runElevated } from './utils'
-import { StartupItem, ProcessItem } from '../../shared/types'
+import { pick } from '../lang'
+import { StartupItem, ProcessItem, Lang } from '../../shared/types'
 
 const RUN = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
 const RUN_HKLM = 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'
@@ -92,7 +93,7 @@ async function listDisabled(): Promise<RawEntry[]> {
 }
 
 /** 启用/禁用启动项：注册表值移入 SurperCleanDisabled 备份键；文件夹项改名 .disabled */
-export async function toggleStartup(id: string, enable: boolean): Promise<{ ok: boolean; message: string }> {
+export async function toggleStartup(id: string, enable: boolean, lang: Lang = 'zh'): Promise<{ ok: boolean; message: string }> {
   const [kind, key, name] = id.split('|')
   if (kind === 'FOLDER') {
     const full = key // key 位存的是完整路径，name 是文件名
@@ -100,7 +101,7 @@ export async function toggleStartup(id: string, enable: boolean): Promise<{ ok: 
     const dst = enable ? src : `${src}.surperclean-disabled`
     try {
       await fs.rename(enable ? `${src}.surperclean-disabled` : src, dst)
-      return { ok: true, message: '已切换' }
+      return { ok: true, message: pick(lang, '已切换', 'Toggled') }
     } catch (e) {
       return { ok: false, message: (e as Error).message }
     }
@@ -117,7 +118,7 @@ export async function toggleStartup(id: string, enable: boolean): Promise<{ ok: 
     try {
       if (isHKLM) await runElevated(script)
       else await runPowerShell(script)
-      return { ok: true, message: '已启用' }
+      return { ok: true, message: pick(lang, '已启用', 'Enabled') }
     } catch (e) {
       return { ok: false, message: (e as Error).message }
     }
@@ -126,7 +127,7 @@ export async function toggleStartup(id: string, enable: boolean): Promise<{ ok: 
     try {
       if (isHKLM) await runElevated(script)
       else await runPowerShell(script)
-      return { ok: true, message: '已禁用' }
+      return { ok: true, message: pick(lang, '已禁用', 'Disabled') }
     } catch (e) {
       return { ok: false, message: (e as Error).message }
     }
@@ -147,10 +148,10 @@ export async function listProcesses(): Promise<ProcessItem[]> {
     })
 }
 
-export async function killProcess(pid: number): Promise<{ ok: boolean; message: string }> {
+export async function killProcess(pid: number, lang: Lang = 'zh'): Promise<{ ok: boolean; message: string }> {
   try {
     process.kill(pid)
-    return { ok: true, message: '已结束' }
+    return { ok: true, message: pick(lang, '已结束', 'Terminated') }
   } catch (e) {
     return { ok: false, message: (e as Error).message }
   }

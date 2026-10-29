@@ -7,7 +7,8 @@ import { JUNK_RULES } from './junkRules'
 import { cleanJunk } from './junk'
 import { cleanPrivacy, PRIVACY_IDS } from './privacy'
 import { formatBytes } from './utils'
-import { ScheduleConfig, ScheduleStatus, CleanResult } from '../../shared/types'
+import { pick } from '../lang'
+import { ScheduleConfig, ScheduleStatus, CleanResult, Lang } from '../../shared/types'
 
 const TASK_NAME = 'SurperClean_AutoClean'
 
@@ -107,8 +108,8 @@ export async function getScheduleStatus(): Promise<ScheduleStatus> {
 }
 
 /** 保存配置并同步计划任务 */
-export async function saveSchedule(cfg: ScheduleConfig): Promise<ScheduleStatus> {
-  if (!validTime(cfg.time)) throw new Error('时间格式应为 HH:mm')
+export async function saveSchedule(cfg: ScheduleConfig, lang: Lang = 'zh'): Promise<ScheduleStatus> {
+  if (!validTime(cfg.time)) throw new Error(pick(lang, '时间格式应为 HH:mm', 'Time must be in HH:mm format'))
   const time = cfg.time
   await fs.mkdir(app.getPath('userData'), { recursive: true }).catch(() => null)
   await fs.writeFile(configFile(), JSON.stringify({ ...cfg, time }, null, 2), 'utf8')
@@ -121,7 +122,7 @@ export async function saveSchedule(cfg: ScheduleConfig): Promise<ScheduleStatus>
 }
 
 /** 静默清理一次（定时任务与「立即运行」共用） */
-export async function runAutoClean(): Promise<CleanResult> {
+export async function runAutoClean(lang: Lang = 'zh'): Promise<CleanResult> {
   const cfg = await loadConfig()
   const total: CleanResult = { files: 0, bytes: 0, errors: [] }
   try {
@@ -138,15 +139,22 @@ export async function runAutoClean(): Promise<CleanResult> {
       total.files += r.files
       total.errors.push(...r.errors)
     }
-    await appendLog(`清理 ${total.files} 项，释放 ${formatBytes(total.bytes)}${total.errors.length ? `，${total.errors.length} 项跳过` : ''}`)
+    await appendLog(
+      pick(
+        lang,
+        `清理 ${total.files} 项，释放 ${formatBytes(total.bytes)}${total.errors.length ? `，${total.errors.length} 项跳过` : ''}`,
+        `Cleaned ${total.files} items, freed ${formatBytes(total.bytes)}${total.errors.length ? `, ${total.errors.length} skipped` : ''}`
+      ),
+      lang
+    )
   } catch (e) {
-    await appendLog(`清理失败：${(e as Error).message}`)
+    await appendLog(pick(lang, `清理失败：${(e as Error).message}`, `Cleanup failed: ${(e as Error).message}`), lang)
     total.errors.push((e as Error).message)
   }
   return total
 }
 
-async function appendLog(text: string): Promise<void> {
-  const line = `[${new Date().toLocaleString('zh-CN')}] ${text}\n`
+async function appendLog(text: string, lang: Lang = 'zh'): Promise<void> {
+  const line = `[${new Date().toLocaleString(lang === 'en' ? 'en-US' : 'zh-CN')}] ${text}\n`
   await fs.appendFile(logFile(), line, 'utf8').catch(() => null)
 }

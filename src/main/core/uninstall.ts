@@ -4,7 +4,8 @@ import { existsSync } from 'fs'
 import os from 'os'
 import path from 'path'
 import { deletePath, expand, runElevated, runPowerShell, walkFiles, matchSimple } from './utils'
-import { UninstallItem, LeftoverItem, LeftoverReport } from '../../shared/types'
+import { pick } from '../lang'
+import { UninstallItem, LeftoverItem, LeftoverReport, Lang } from '../../shared/types'
 
 const REG_ROOTS = [
   'HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',
@@ -75,9 +76,18 @@ function cleanRegPath(psPath?: string): string {
 }
 
 /** 卸载：MSI 走静默参数，其余调用原始卸载命令（均提权执行） */
-export async function uninstallApp(app: UninstallItem): Promise<{ ok: boolean; message: string }> {
+export async function uninstallApp(app: UninstallItem, lang: Lang = 'zh'): Promise<{ ok: boolean; message: string }> {
   const cmd = app.quietUninstall || app.uninstall
-  if (!cmd) return { ok: false, message: '该软件未登记卸载命令，请到「设置 → 应用」中卸载' }
+  if (!cmd) {
+    return {
+      ok: false,
+      message: pick(
+        lang,
+        '该软件未登记卸载命令，请到「设置 → 应用」中卸载',
+        'No uninstall command registered. Use Settings → Apps instead'
+      )
+    }
+  }
   try {
     const isMsi = /msi(exec)?\.exe/i.test(cmd)
     const guid = cmd.match(/[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}/)?.[0]
@@ -86,15 +96,25 @@ export async function uninstallApp(app: UninstallItem): Promise<{ ok: boolean; m
         `$p = Start-Process -FilePath 'msiexec.exe' -ArgumentList '/x','${guid}','/qn','/norestart' -Verb RunAs -Wait -PassThru; exit $p.ExitCode`,
         600000
       )
-      return { ok: true, message: `${app.name} 已卸载` }
+      return { ok: true, message: pick(lang, `${app.name} 已卸载`, `${app.name} uninstalled`) }
     }
     await runElevated(
       `$p = Start-Process -FilePath 'cmd.exe' -ArgumentList '/c','${esc(cmd)}' -Verb RunAs -Wait -PassThru; exit $p.ExitCode`,
       600000
     )
-    return { ok: true, message: `${app.name} 卸载结束（如仍有窗口请按提示操作）` }
+    return {
+      ok: true,
+      message: pick(
+        lang,
+        `${app.name} 卸载结束（如仍有窗口请按提示操作）`,
+        `${app.name} uninstall finished (follow any remaining prompts)`
+      )
+    }
   } catch (e) {
-    return { ok: false, message: `${app.name} 卸载失败：${(e as Error).message}` }
+    return {
+      ok: false,
+      message: pick(lang, `${app.name} 卸载失败：${(e as Error).message}`, `${app.name} uninstall failed: ${(e as Error).message}`)
+    }
   }
 }
 

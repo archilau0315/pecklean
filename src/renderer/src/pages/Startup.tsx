@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
 import { formatBytes } from './fmt'
+import { useI18n } from '../i18n'
+import { startupLocation } from '../i18n/helpers'
 import type { StartupItem, ProcessItem } from '../../../shared/types'
 
 export default function Startup(): React.JSX.Element {
+  const { t, lang } = useI18n()
   const [tab, setTab] = useState<'startup' | 'process'>('startup')
   const [items, setItems] = useState<StartupItem[]>([])
   const [procs, setProcs] = useState<ProcessItem[]>([])
@@ -32,15 +35,15 @@ export default function Startup(): React.JSX.Element {
   }, [tab])
 
   const toggle = async (item: StartupItem): Promise<void> => {
-    if (item.hive === 'HKLM' && !confirm(`${item.name} 在系统注册表中，需要 UAC 提权，继续？`)) return
-    const r = await window.api.startupToggle(item.id, !item.enabled)
+    if (item.hive === 'HKLM' && !confirm(t('startup.uacConfirm', { name: item.name }))) return
+    const r = await window.api.startupToggle(item.id, !item.enabled, lang)
     setMsg(`${item.name}: ${r.message}`)
     loadStartup()
   }
 
   const kill = async (p: ProcessItem): Promise<void> => {
-    if (!confirm(`结束进程 ${p.name} (${p.pid})？未保存的数据可能丢失。`)) return
-    const r = await window.api.processKill(p.pid)
+    if (!confirm(t('startup.killConfirm', { name: p.name, pid: p.pid }))) return
+    const r = await window.api.processKill(p.pid, lang)
     setMsg(`${p.name}: ${r.message}`)
     loadProcs()
   }
@@ -48,18 +51,18 @@ export default function Startup(): React.JSX.Element {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>电脑加速</h1>
+        <h1>{t('startup.title')}</h1>
         <div className="tabs">
           <button className={`tab ${tab === 'startup' ? 'active' : ''}`} onClick={() => setTab('startup')}>
-            启动项
+            {t('startup.tab.startup')}
           </button>
           <button className={`tab ${tab === 'process' ? 'active' : ''}`} onClick={() => setTab('process')}>
-            进程管理
+            {t('startup.tab.process')}
           </button>
         </div>
       </div>
       {msg && <div className="result-box">{msg}</div>}
-      {loading && <div className="progress-line">加载中…</div>}
+      {loading && <div className="progress-line">{t('startup.loading')}</div>}
 
       {tab === 'startup' && !loading && (
         <div className="category">
@@ -67,17 +70,19 @@ export default function Startup(): React.JSX.Element {
             <div key={i.id} className="item-row">
               <span className="item-name">
                 {i.name}
-                <span className={`badge ${i.enabled ? 'on' : 'off'}`}>{i.enabled ? '启用' : '已禁用'}</span>
+                <span className={`badge ${i.enabled ? 'on' : 'off'}`}>
+                  {i.enabled ? t('startup.enabled') : t('startup.disabled')}
+                </span>
               </span>
               <span className="item-samples" title={i.command}>
-                {i.command}（{i.location}）
+                {t('startup.commandWithLoc', { command: i.command, location: startupLocation(t, i) })}
               </span>
               <button className="btn small" onClick={() => toggle(i)}>
-                {i.enabled ? '禁用' : '启用'}
+                {i.enabled ? t('startup.disable') : t('startup.enable')}
               </button>
             </div>
           ))}
-          {items.length === 0 && <div className="empty-state">未发现启动项</div>}
+          {items.length === 0 && <div className="empty-state">{t('startup.empty')}</div>}
         </div>
       )}
 
@@ -86,10 +91,10 @@ export default function Startup(): React.JSX.Element {
           {procs.map((p) => (
             <div key={p.pid} className="item-row">
               <span className="item-name">{p.name}</span>
-              <span className="item-samples">PID {p.pid}</span>
+              <span className="item-samples">{t('startup.pid', { pid: p.pid })}</span>
               <span className="item-size">{formatBytes(p.memMB * 1024 * 1024)}</span>
               <button className="btn small danger" onClick={() => kill(p)}>
-                结束
+                {t('startup.kill')}
               </button>
             </div>
           ))}

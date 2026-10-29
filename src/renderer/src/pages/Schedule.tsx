@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { formatBytes } from './fmt'
+import { useI18n } from '../i18n'
 import type { ScheduleStatus, ScheduleConfig } from '../../../shared/types'
 
 export default function Schedule(): React.JSX.Element {
+  const { t, lang } = useI18n()
   const [status, setStatus] = useState<ScheduleStatus | null>(null)
   const [enabled, setEnabled] = useState(false)
   const [time, setTime] = useState('03:00')
@@ -36,16 +38,16 @@ export default function Schedule(): React.JSX.Element {
         privacy,
         recycleBin
       }
-      const s = await window.api.scheduleSave(cfg)
+      const s = await window.api.scheduleSave(cfg, lang)
       setStatus(s)
       setMsg(
         s.enabled
-          ? `已开启：每天 ${s.time} 自动静默清理${s.taskExists ? '' : '（警告：计划任务创建失败）'}`
-          : '已关闭定时清理'
+          ? t('schedule.savedOn', { time: s.time }) + (s.taskExists ? '' : t('schedule.taskWarn'))
+          : t('schedule.savedOff')
       )
       setFailed(s.enabled && !s.taskExists)
     } catch (e) {
-      setMsg(`保存失败：${(e as Error).message}`)
+      setMsg(t('schedule.saveFail', { msg: (e as Error).message }))
       setFailed(true)
     } finally {
       setBusy(false)
@@ -53,12 +55,15 @@ export default function Schedule(): React.JSX.Element {
   }
 
   const runNow = async (): Promise<void> => {
-    if (!confirm('立即执行一次静默清理？会删除垃圾文件与隐私记录。')) return
+    if (!confirm(t('schedule.confirm'))) return
     setBusy(true)
     setFailed(false)
     try {
-      const r = await window.api.scheduleRunNow()
-      setMsg(`清理完成：${r.files} 项，释放 ${formatBytes(r.bytes)}${r.errors.length ? `，${r.errors.length} 项跳过` : ''}`)
+      const r = await window.api.scheduleRunNow(lang)
+      setMsg(
+        t('schedule.done', { files: r.files, size: formatBytes(r.bytes) }) +
+          (r.errors.length ? t('schedule.skipped', { n: r.errors.length }) : '')
+      )
       await load()
     } finally {
       setBusy(false)
@@ -68,61 +73,61 @@ export default function Schedule(): React.JSX.Element {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>定时清理</h1>
-        <span className="muted small">由 Windows 计划任务在指定时间自动运行</span>
+        <h1>{t('schedule.title')}</h1>
+        <span className="muted small">{t('schedule.subtitle')}</span>
       </div>
       {msg && <div className={`result-box ${failed ? 'warn' : ''}`}>{msg}</div>}
 
       <div className="category">
         <div className="item-row static">
-          <span className="item-name">开启定时自动清理</span>
-          <span className="item-samples">每天到点后在后台静默清理，不弹窗</span>
-          <span className={`badge ${enabled ? 'on' : 'off'}`}>{enabled ? '已开启' : '已关闭'}</span>
+          <span className="item-name">{t('schedule.enable')}</span>
+          <span className="item-samples">{t('schedule.enableDesc')}</span>
+          <span className={`badge ${enabled ? 'on' : 'off'}`}>{enabled ? t('schedule.on') : t('schedule.off')}</span>
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
         </div>
 
         <div className="form-row">
-          <span className="form-label">每天时间</span>
+          <span className="form-label">{t('schedule.time')}</span>
           <input className="time-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
         </div>
 
         <label className="item-row static">
           <input type="checkbox" checked={privacy} onChange={(e) => setPrivacy(e.target.checked)} />
-          <span className="item-name">同时清理隐私痕迹</span>
-          <span className="item-samples">运行历史、最近文档、使用痕迹、浏览历史</span>
+          <span className="item-name">{t('schedule.privacy')}</span>
+          <span className="item-samples">{t('schedule.privacyDesc')}</span>
         </label>
         <label className="item-row static">
           <input type="checkbox" checked={recycleBin} onChange={(e) => setRecycleBin(e.target.checked)} />
-          <span className="item-name">同时清空回收站</span>
-          <span className="item-samples">回收站里的文件将被永久删除</span>
+          <span className="item-name">{t('schedule.recycle')}</span>
+          <span className="item-samples">{t('schedule.recycleDesc')}</span>
         </label>
       </div>
 
       <div className="tip-box">
-        <b>说明</b>
+        <b>{t('schedule.tip.title')}</b>
         <ul>
-          <li>定时清理只处理无需管理员权限的安全缓存项，系统级项目会跳过，避免半夜弹 UAC</li>
-          <li>计划任务名为 SurperClean_AutoClean，可在「任务计划程序」中随时停用</li>
-          <li>清理结果记录在日志里，见下方「最近记录」</li>
+          <li>{t('schedule.tip.1')}</li>
+          <li>{t('schedule.tip.2')}</li>
+          <li>{t('schedule.tip.3')}</li>
         </ul>
       </div>
 
       <div className="actions">
         <button className="btn primary" onClick={save} disabled={busy}>
-          {busy ? '处理中…' : '保存设置'}
+          {busy ? t('schedule.saving') : t('schedule.save')}
         </button>
         <button className="btn" onClick={runNow} disabled={busy}>
-          立即运行一次
+          {t('schedule.runNow')}
         </button>
         <span className="spacer" />
         <span className={`badge ${status?.taskExists ? 'on' : 'off'}`}>
-          计划任务{status?.taskExists ? '已注册' : '未注册'}
+          {status?.taskExists ? t('schedule.task.on') : t('schedule.task.off')}
         </span>
       </div>
 
       {status?.log && (
         <div className="category">
-          <div className="category-title">最近记录</div>
+          <div className="category-title">{t('schedule.log')}</div>
           <pre className="log-box">{status.log}</pre>
         </div>
       )}

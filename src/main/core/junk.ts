@@ -2,7 +2,7 @@
 import { promises as fs } from 'fs'
 import { JUNK_RULES, JunkRule } from './junkRules'
 import { deletePath, resolveGlob, walkFiles, runElevated, runPowerShell, formatBytes } from './utils'
-import { ScanItem, CleanResult } from '../../shared/types'
+import { ScanItem, CleanResult, ScanProgress } from '../../shared/types'
 
 /** 回收站特殊项：用 PowerShell COM 扫描、Clear-RecycleBin 清空 */
 const RECYCLE_ID = 'recyclebin'
@@ -10,22 +10,22 @@ const RECYCLE_ID = 'recyclebin'
 /** 扫描指定规则 id（不传则全量），返回每个规则的空间占用 */
 export async function scanJunk(
   ids: string[] | null,
-  onProgress?: (p: { current: string; done: number; total: number }) => void
+  onProgress?: (p: ScanProgress) => void
 ): Promise<ScanItem[]> {
   const rules = ids?.length ? JUNK_RULES.filter((r) => ids.includes(r.id)) : JUNK_RULES
   const total = rules.length + 1
   let done = 0
   const items: ScanItem[] = []
   for (const rule of rules) {
-    onProgress?.({ current: rule.name, done, total })
+    onProgress?.({ current: rule.name, id: rule.id, done, total })
     const item = await scanRule(rule)
     items.push(item)
     done++
   }
-  onProgress?.({ current: '回收站', done, total })
+  onProgress?.({ current: '回收站', id: RECYCLE_ID, done, total })
   items.push(await scanRecycleBin())
   done++
-  onProgress?.({ current: '完成', done, total })
+  onProgress?.({ current: '完成', id: 'done', done, total })
   return items
 }
 

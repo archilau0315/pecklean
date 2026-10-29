@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
+import { useI18n } from '../i18n'
+import { privacyDesc, privacyName } from '../i18n/helpers'
 import type { PrivacyItem, CleanResult } from '../../../shared/types'
 
 export default function Privacy(): React.JSX.Element {
+  const { t } = useI18n()
   const [items, setItems] = useState<PrivacyItem[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(false)
@@ -22,7 +25,7 @@ export default function Privacy(): React.JSX.Element {
 
   const clean = async (): Promise<void> => {
     if (!selected.size) return
-    if (!confirm('将删除选中的隐私痕迹记录，不可恢复，继续？')) return
+    if (!confirm(t('privacy.confirm'))) return
     setCleaning(true)
     try {
       const res = await window.api.privacyClean([...selected])
@@ -40,22 +43,24 @@ export default function Privacy(): React.JSX.Element {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>隐私清理</h1>
+        <h1>{t('privacy.title')}</h1>
         <div className="actions">
           <button className="btn" onClick={scan} disabled={loading || cleaning}>
-            {loading ? '扫描中…' : '重新扫描'}
+            {loading ? t('privacy.scanning') : t('privacy.scan')}
           </button>
           <button className="btn primary" onClick={clean} disabled={cleaning || loading || !selected.size}>
-            {cleaning ? '清理中…' : '清理选中项'}
+            {cleaning ? t('privacy.cleaning') : t('privacy.clean')}
           </button>
         </div>
       </div>
       {result && (
         <div className={`result-box ${result.errors.length ? 'warn' : ''}`}>
-          清理完成{result.errors.length > 0 && `，${result.errors.length} 项失败：${result.errors[0]}`}
+          {t('privacy.done')}
+          {result.errors.length > 0 &&
+            t('privacy.doneFail', { n: result.errors.length, msg: result.errors[0] })}
         </div>
       )}
-      <div className="muted small">提示：浏览器历史需要在对应浏览器完全退出后才能清理</div>
+      <div className="muted small">{t('privacy.hint')}</div>
       <div className="category">
         {items.map((i) => (
           <label key={i.id} className={`item-row ${i.count === 0 ? 'empty' : ''}`}>
@@ -72,9 +77,9 @@ export default function Privacy(): React.JSX.Element {
               }
               disabled={i.count === 0}
             />
-            <span className="item-name">{i.name}</span>
-            <span className="item-samples">{i.desc}</span>
-            <span className="item-size">{i.count > 0 ? `${i.count} 条` : '无记录'}</span>
+            <span className="item-name">{privacyName(t, i)}</span>
+            <span className="item-samples">{privacyDesc(t, i)}</span>
+            <span className="item-size">{i.count > 0 ? t('privacy.count', { n: i.count }) : t('privacy.none')}</span>
           </label>
         ))}
       </div>

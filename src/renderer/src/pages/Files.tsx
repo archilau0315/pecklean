@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { formatBytes, formatDate } from './fmt'
+import { useI18n } from '../i18n'
 import type { BigFileItem, DuplicateGroup } from '../../../shared/types'
 
 export default function Files(): React.JSX.Element {
+  const { t } = useI18n()
   const [tab, setTab] = useState<'big' | 'dup'>('big')
   const [roots, setRoots] = useState<string[]>([])
   const [root, setRoot] = useState('')
@@ -24,7 +26,7 @@ export default function Files(): React.JSX.Element {
   const scanBig = async (): Promise<void> => {
     setBusy(true)
     setBigFiles([])
-    const off = window.api.onBigProgress((p) => setProgress(`扫描 ${p}`))
+    const off = window.api.onBigProgress((p) => setProgress(t('files.progress.big', { path: p })))
     try {
       setBigFiles(await window.api.findBig(roots, minMB))
     } finally {
@@ -39,7 +41,7 @@ export default function Files(): React.JSX.Element {
     setBusy(true)
     setDupGroups([])
     setDupChecked(new Set())
-    const off = window.api.onDupProgress((n) => setProgress(`已扫描 ${n} 个文件`))
+    const off = window.api.onDupProgress((n) => setProgress(t('files.progress.dup', { n })))
     try {
       setDupGroups(await window.api.findDup(root))
     } finally {
@@ -50,16 +52,18 @@ export default function Files(): React.JSX.Element {
   }
 
   const deleteBig = async (paths: string[]): Promise<void> => {
-    if (!paths.length || !confirm(`删除选中的 ${paths.length} 个文件？不可恢复！`)) return
+    if (!paths.length || !confirm(t('files.confirmBig', { n: paths.length }))) return
     const r = await window.api.deleteFiles(paths)
-    setMsg(`已删除 ${r.files} 个文件${r.errors.length ? `，${r.errors.length} 个失败` : ''}`)
+    setMsg(
+      t('files.deleted', { n: r.files }) + (r.errors.length ? t('files.deletedFail', { n: r.errors.length }) : '')
+    )
     setBigFiles((prev) => prev.filter((f) => !paths.includes(f.path)))
   }
 
   const deleteDup = async (): Promise<void> => {
-    if (!dupChecked.size || !confirm(`删除选中的 ${dupChecked.size} 个重复文件？不可恢复！`)) return
+    if (!dupChecked.size || !confirm(t('files.confirmDup', { n: dupChecked.size }))) return
     const r = await window.api.deleteFiles([...dupChecked])
-    setMsg(`已删除 ${r.files} 个重复文件，释放空间`)
+    setMsg(t('files.dupDeleted', { n: r.files }))
     setDupGroups((prev) =>
       prev
         .map((g) => ({ ...g, files: g.files.filter((f) => !dupChecked.has(f.path)) }))
@@ -80,23 +84,23 @@ export default function Files(): React.JSX.Element {
   return (
     <div className="page">
       <div className="page-head">
-        <h1>大文件 / 重复文件</h1>
+        <h1>{t('files.title')}</h1>
         <div className="tabs">
           <button className={`tab ${tab === 'big' ? 'active' : ''}`} onClick={() => setTab('big')}>
-            大文件
+            {t('files.tab.big')}
           </button>
           <button className={`tab ${tab === 'dup' ? 'active' : ''}`} onClick={() => setTab('dup')}>
-            重复文件
+            {t('files.tab.dup')}
           </button>
         </div>
       </div>
       {msg && <div className="result-box">{msg}</div>}
-      {busy && <div className="progress-line">{progress || '扫描中…'}</div>}
+      {busy && <div className="progress-line">{progress || t('files.scanning')}</div>}
 
       {tab === 'big' && (
         <>
           <div className="filter-row">
-            <span>扫描位置：</span>
+            <span>{t('files.scanRoots')}</span>
             {roots.map((r) => (
               <label key={r} className="chip">
                 <input
@@ -110,11 +114,11 @@ export default function Files(): React.JSX.Element {
               </label>
             ))}
             <span className="spacer" />
-            <span>大于</span>
+            <span>{t('files.greaterThan')}</span>
             <input type="number" value={minMB} min={1} onChange={(e) => setMinMB(+e.target.value || 100)} />
             <span>MB</span>
             <button className="btn primary" onClick={scanBig} disabled={busy || !roots.length}>
-              扫描
+              {t('files.scan')}
             </button>
           </div>
           {bigFiles.map((f) => (
@@ -125,38 +129,40 @@ export default function Files(): React.JSX.Element {
               <span className="item-size">{formatBytes(f.bytes)}</span>
               <span className="item-samples">{formatDate(f.modified)}</span>
               <button className="btn small danger" onClick={() => deleteBig([f.path])}>
-                删除
+                {t('files.delete')}
               </button>
             </div>
           ))}
-          {!busy && bigFiles.length === 0 && <div className="empty-state">设置条件后点击扫描</div>}
+          {!busy && bigFiles.length === 0 && <div className="empty-state">{t('files.empty.big')}</div>}
         </>
       )}
 
       {tab === 'dup' && (
         <>
           <div className="filter-row">
-            <span>扫描目录：</span>
-            <input className="text-input grow" value={root} onChange={(e) => setRoot(e.target.value)} placeholder="输入文件夹路径，如 D:\下载" />
+            <span>{t('files.scanDir')}</span>
+            <input className="text-input grow" value={root} onChange={(e) => setRoot(e.target.value)} placeholder={t('files.dupPlaceholder')} />
             <button className="btn primary" onClick={scanDup} disabled={busy || !root}>
-              扫描
+              {t('files.scan')}
             </button>
           </div>
           {dupGroups.length > 0 && (
             <div className="page-head">
               <span className="muted">
-                发现 {dupGroups.length} 组重复文件（共可释放{' '}
-                {formatBytes(dupGroups.reduce((s, g) => s + g.files[0].bytes * (g.files.length - 1), 0))}）
+                {t('files.dupFound', {
+                  n: dupGroups.length,
+                  size: formatBytes(dupGroups.reduce((s, g) => s + g.files[0].bytes * (g.files.length - 1), 0))
+                })}
               </span>
               <button className="btn danger" onClick={deleteDup} disabled={!dupChecked.size}>
-                删除选中 ({dupChecked.size})
+                {t('files.dupDelete', { n: dupChecked.size })}
               </button>
             </div>
           )}
           {dupGroups.map((g) => (
             <div key={g.hash} className="dup-group">
               <div className="category-title">
-                {g.files.length} 个相同文件 · 每个 {formatBytes(g.files[0]?.bytes ?? 0)}
+                {t('files.dupGroup', { n: g.files.length, size: formatBytes(g.files[0]?.bytes ?? 0) })}
               </div>
               {g.files.map((f, idx) => (
                 <label key={f.path} className="item-row">
@@ -164,12 +170,12 @@ export default function Files(): React.JSX.Element {
                   <span className="item-samples grow" title={f.path}>
                     {f.path}
                   </span>
-                  {idx === 0 && <span className="badge on">建议保留</span>}
+                  {idx === 0 && <span className="badge on">{t('files.keep')}</span>}
                 </label>
               ))}
             </div>
           ))}
-          {!busy && dupGroups.length === 0 && <div className="empty-state">输入目录后点击扫描</div>}
+          {!busy && dupGroups.length === 0 && <div className="empty-state">{t('files.empty.dup')}</div>}
         </>
       )}
     </div>

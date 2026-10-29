@@ -7,7 +7,7 @@ import { findBigFiles, findDuplicates, deleteFiles, DEFAULT_BIG_ROOTS } from './
 import { listApps, uninstallApp, scanLeftovers, cleanLeftovers } from './core/uninstall'
 import { listPresets, listDrives, dirSize, defaultTarget, moveDirectory } from './core/move'
 import { getScheduleStatus, saveSchedule, runAutoClean } from './core/schedule'
-import { AppInfo, UninstallItem, LeftoverItem, ScheduleConfig } from '../shared/types'
+import { AppInfo, UninstallItem, LeftoverItem, ScheduleConfig, Lang } from '../shared/types'
 
 function push(channel: string, payload: unknown): void {
   for (const win of BrowserWindow.getAllWindows()) {
@@ -50,9 +50,9 @@ export function registerIpc(): void {
 
   // ── 电脑加速 ──
   ipcMain.handle('startup:list', () => listStartup())
-  ipcMain.handle('startup:toggle', (_e, id: string, enable: boolean) => toggleStartup(id, enable))
+  ipcMain.handle('startup:toggle', (_e, id: string, enable: boolean, lang: Lang) => toggleStartup(id, enable, lang))
   ipcMain.handle('process:list', () => listProcesses())
-  ipcMain.handle('process:kill', (_e, pid: number) => killProcess(pid))
+  ipcMain.handle('process:kill', (_e, pid: number, lang: Lang) => killProcess(pid, lang))
 
   // ── 大文件/重复文件 ──
   ipcMain.handle('files:bigRoots', () => DEFAULT_BIG_ROOTS)
@@ -70,7 +70,7 @@ export function registerIpc(): void {
 
   // ── 软件卸载 ──
   ipcMain.handle('uninstall:list', () => listApps())
-  ipcMain.handle('uninstall:remove', (_e, appItem: UninstallItem) => uninstallApp(appItem))
+  ipcMain.handle('uninstall:remove', (_e, appItem: UninstallItem, lang: Lang) => uninstallApp(appItem, lang))
   ipcMain.handle('uninstall:leftovers', (_e, appItem: UninstallItem) => scanLeftovers(appItem))
   ipcMain.handle('uninstall:cleanLeftovers', (_e, items: LeftoverItem[]) => cleanLeftovers(items))
 
@@ -81,12 +81,12 @@ export function registerIpc(): void {
   ipcMain.handle('move:defaultTarget', (_e, src: string, drive: string) => defaultTarget(src, drive))
   ipcMain.handle(
     'move:run',
-    (_e, src: string, dest: string) =>
-      moveDirectory(src, dest, (p) => push('move:progress', p))
+    (_e, src: string, dest: string, lang: Lang) =>
+      moveDirectory(src, dest, (p) => push('move:progress', p), lang)
   )
 
   // ── 定时清理 ──
   ipcMain.handle('schedule:get', () => getScheduleStatus())
-  ipcMain.handle('schedule:save', (_e, cfg: ScheduleConfig) => saveSchedule(cfg))
-  ipcMain.handle('schedule:runNow', () => runAutoClean())
+  ipcMain.handle('schedule:save', (_e, cfg: ScheduleConfig, lang: Lang) => saveSchedule(cfg, lang))
+  ipcMain.handle('schedule:runNow', (_e, lang: Lang) => runAutoClean(lang))
 }

@@ -49,6 +49,14 @@
 - 变更简述：目录搬移支持资源管理器选目录。新增 `dialog:pickFolder` IPC（系统文件夹选择框，可新建文件夹），原目录与新位置各加一个「选择」按钮；手动选定的目标位置不再被「目标盘」自动覆盖，目录大小显示改为独立于目标位置计算
 - 备注：typecheck/build 通过；开发态 CDP 确认两个按钮渲染正常、pickFolder 已暴露
 
+## 8
+
+- 时间：2026-10-29 18:05
+- 模块：i18n/*、App.tsx、pages/*、styles.css、ipc.ts、preload/index.ts、api.d.ts、shared/types.ts、core/{startup,uninstall,move,schedule,junk}.ts、main/lang.ts
+- 变更简述：新增中英双语。渲染层用自写 i18n（LanguageProvider + useI18n + t，localStorage 记忆），中英各 182 key；8 个页面全部文案走翻译；侧边栏「中文 / EN」即时切换并同步窗口标题；主进程返回的规则名、分类、隐私项、预设、残留类型按 id/kind 在渲染层翻译，缺失回退原文；启动项/卸载/搬移/定时清理的结果消息与进度文案由主进程按传入 lang 返回中英双语
+- 备注：typecheck/build 通过；CDP 实测中→英→中切换，导航、首页、垃圾清理、定时清理文案与窗口标题均正确切换，语言选择可持久化；未翻译项：软件名/进程名/注册表名称等原始数据、旧清理日志、浏览器未关闭等错误详情
+
+
 
 
 
