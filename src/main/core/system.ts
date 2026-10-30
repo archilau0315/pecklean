@@ -40,18 +40,7 @@ export async function listDrives(): Promise<DriveInfo[]> {
   } | ConvertTo-Json -Compress`
   try {
     const out = await runPowerShell(ps, 15000)
-    const arr = JSON.parse(out.trim()) as Record<string, unknown>[]
-    // 可能单对象不是数组
-    const list = Array.isArray(arr) ? arr : [arr]
-    return list.map((d) => ({
-      letter: String(d.Letter ?? ''),
-      label: String(d.Label ?? ''),
-      fs: String(d.FS ?? ''),
-      totalMB: Number(d.TotalMB ?? 0),
-      freeMB: Number(d.FreeMB ?? 0),
-      type: (String(d.Type ?? 'Unknown') as DriveInfo['type']),
-      fragmented: null
-    }))
+    return mapDriveRaw(out)
   } catch {
     return []
   }
@@ -62,13 +51,7 @@ export async function analyzeDefrag(drive: string): Promise<number | null> {
   const ps = `defrag ${drive} /A /V 2>&1 | Out-String`
   try {
     const out = await runPowerShell(ps, 120000)
-    // Windows 10/11 输出： "Total fragmented space    = XX% (xxx bytes)"
-    const m = out.match(/Total fragmented space\s*=\s*(\d+)%/i)
-    if (m) return parseInt(m[1], 10)
-    // 回退： "Analysis complete. (XX% fragmented)"
-    const m2 = out.match(/Analysis complete\.\s*\((\d+)%\s*fragmented\)/i)
-    if (m2) return parseInt(m2[1], 10)
-    return null
+    return parseDefragPct(out)
   } catch {
     return null
   }
@@ -85,8 +68,7 @@ export async function runDefrag(drive: string, onProgress?: (msg: string) => voi
   const ps = `defrag ${drive} /O 2>&1 | Out-String`
   try {
     const out = await runPowerShell(ps, 600000) // 10 分钟超时
-    const m = out.match(/Total fragmented space\s*=\s*(\d+)%/i)
-    const finalPct = m ? parseInt(m[1], 10) : pct
+    const finalPct = parseDefragPct(out) ?? pct
     onProgress?.(`Done. Final fragmentation: ${finalPct ?? '?'}%`)
     return { ok: true, drive, beforePct: pct, afterPct: finalPct }
   } catch (e) {
@@ -131,22 +113,7 @@ $top   = Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -Fir
 } | ConvertTo-Json -Compress -Depth 3`
   try {
     const out = await runPowerShell(ps, 15000)
-    const d = JSON.parse(out.trim()) as Record<string, unknown>
-    const totalMB = Number(d.TotalMB ?? 0)
-    const freeMB = Number(d.FreeMB ?? 0)
-    const top = (d.Top as Record<string, unknown>[] | undefined) ?? []
-    const usedMB = Math.max(0, totalMB - freeMB)
-    return {
-      totalMB,
-      availableMB: freeMB,
-      usedMB,
-      usedPct: totalMB > 0 ? Math.round((usedMB / totalMB) * 100) : 0,
-      topProcesses: top.map((p) => ({
-        name: String(p.Name ?? ''),
-        pid: Number(p.PID ?? 0),
-        memMB: Number(p.MemMB ?? 0)
-      }))
-    }
+    return mapMemRaw(out)
   } catch {
     return { totalMB: 0, availableMB: 0, usedMB: 0, usedPct: 0, topProcesses: [] }
   }
@@ -154,57 +121,20 @@ $top   = Get-Process | Sort-Object WorkingSet64 -Descending | Select-Object -Fir
 
 /** 内存加速：对工作集 > threshold 的进程调用 EmptyWorkingSet，把物理内存刷到分页文件 */
 export async function memoryBoost(opts?: {
-  thresholdMB?: number        // 只处理工作集超过这个值的进程
-  excludeSystem?: boolean     // 排除 system / idle / registry 等关键进程
+  thresholdMB?: number
+  excludeSystem?: boolean
   onProgress?: (msg: string) => void
 }): Promise<MemoryBoostResult> {
   const threshold = opts?.thresholdMB ?? 50
-  const excludeSystem = opts?.excludeSystem !== false // 默认排除
+  const excludeSystem = opts?.excludeSystem !== false
   const onProgress = opts?.onProgress ?? (() => {})
 
   onProgress(`Before: ${formatMem(await memoryInfo())}`)
-
-  // PowerShell：Add-Type psapi.dll EmptyWorkingSet → 遍历进程 → 调用
-  const ps = `
-Add-Type @'
-using System;
-using System.Runtime.InteropServices;
-public class MemAPI {
-  [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr hProcess);
-}
-'@
-$exclude = @('', 'System Idle Process', 'System', 'Registry', 'smss', 'csrss', 'wininit', 'services', 'lsass', 'winlogon', 'fontdrvhost', 'dwm', 'MemCompression')
-$freed = 0
-$count = 0
-Get-Process | Where-Object {
-  $_.WorkingSet64 -gt $threshold * 1MB
-  $(if ($excludeSystem) { $_.ProcessName -notin $exclude } else { $true })
-} | ForEach-Object {
-  try {
-    $before = $_.WorkingSet64
-    [MemAPI]::EmptyWorkingSet($_.Handle) | Out-Null
-    $_.MinWorkingSet = [intptr]::MinValue
-    $after = (Get-Process -Id $_.Id -ErrorAction SilentlyContinue).WorkingSet64
-    if ($after -lt $before) {
-      $script:freed += ($before - $after)
-    }
-    $script:count++
-  } catch {}
-}
-"FREED=$([math]::Round($freed/1MB))"
-"COUNT=$count"
-`.trim()
+  const ps = buildMemBoostScript(threshold, excludeSystem)
 
   try {
     const out = await runPowerShell(ps, 60000)
-    let freedMB = 0
-    let count = 0
-    for (const line of out.split(/\r?\n/)) {
-      const m = line.match(/^FREED=(\d+)$/)
-      if (m) freedMB = parseInt(m[1], 10)
-      const m2 = line.match(/^COUNT=(\d+)$/)
-      if (m2) count = parseInt(m2[1], 10)
-    }
+    const { freedMB, count } = parseBoostOutput(out)
     const after = await memoryInfo()
     onProgress(`After: ${formatMem(after)}`)
     return { ok: true, freedMB, processedCount: count, after }
@@ -225,3 +155,109 @@ function formatMem(m: MemoryInfo): string {
   if (!m.totalMB) return 'mem unknown'
   return `${m.usedMB}/${m.totalMB}MB (${m.usedPct}%)`
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// 纯函数（可单测，不依赖 PowerShell）
+// ═══════════════════════════════════════════════════════════════════
+
+/** 从 defrag /A /V 或 /O 输出里解析碎片率百分比 */
+export function parseDefragPct(output: string): number | null {
+  const m = output.match(/Total fragmented space\s*=\s*(\d+)%/i)
+  if (m) return parseInt(m[1], 10)
+  const m2 = output.match(/Analysis complete\.\s*\((\d+)%\s*fragmented\)/i)
+  if (m2) return parseInt(m2[1], 10)
+  return null
+}
+
+/** 把 PowerShell 输出的单/多 JSON 对象映射成 DriveInfo[] */
+export function mapDriveRaw(rawOut: string): DriveInfo[] {
+  let arr: Record<string, unknown>[] | Record<string, unknown>
+  try {
+    arr = JSON.parse(rawOut.trim()) as Record<string, unknown>
+  } catch {
+    return []
+  }
+  const list = Array.isArray(arr) ? arr : [arr]
+  return list.map((d) => ({
+    letter: String(d.Letter ?? ''),
+    label: String(d.Label ?? ''),
+    fs: String(d.FS ?? ''),
+    totalMB: Number(d.TotalMB ?? 0),
+    freeMB: Number(d.FreeMB ?? 0),
+    type: (String(d.Type ?? 'Unknown') as DriveInfo['type']),
+    fragmented: null
+  }))
+}
+
+/** 把 PowerShell 输出映射成 MemoryInfo */
+export function mapMemRaw(rawOut: string): MemoryInfo {
+  let d: Record<string, unknown>
+  try {
+    d = JSON.parse(rawOut.trim()) as Record<string, unknown>
+  } catch {
+    return { totalMB: 0, availableMB: 0, usedMB: 0, usedPct: 0, topProcesses: [] }
+  }
+  const totalMB = Number(d.TotalMB ?? 0)
+  const freeMB = Number(d.FreeMB ?? 0)
+  const top = (d.Top as Record<string, unknown>[] | undefined) ?? []
+  const usedMB = Math.max(0, totalMB - freeMB)
+  return {
+    totalMB,
+    availableMB: freeMB,
+    usedMB,
+    usedPct: totalMB > 0 ? Math.round((usedMB / totalMB) * 100) : 0,
+    topProcesses: top.map((p) => ({
+      name: String(p.Name ?? ''),
+      pid: Number(p.PID ?? 0),
+      memMB: Number(p.MemMB ?? 0)
+    }))
+  }
+}
+
+/** 解析 memoryBoost PowerShell 输出里的 FREED= / COUNT= 两行 */
+export function parseBoostOutput(output: string): { freedMB: number; count: number } {
+  let freedMB = 0
+  let count = 0
+  for (const line of output.split(/\r?\n/)) {
+    const m = line.match(/^FREED=(\d+)$/)
+    if (m) freedMB = parseInt(m[1], 10)
+    const m2 = line.match(/^COUNT=(\d+)$/)
+    if (m2) count = parseInt(m2[1], 10)
+  }
+  return { freedMB, count }
+}
+
+/** 生成 memoryBoost 的 PowerShell 脚本（纯字符串生成，可单测） */
+export function buildMemBoostScript(thresholdMB = 50, excludeSystem = true): string {
+  const excludeArr = [
+    '', 'System Idle Process', 'System', 'Registry', 'smss', 'csrss', 'wininit',
+    'services', 'lsass', 'winlogon', 'fontdrvhost', 'dwm', 'MemCompression'
+  ]
+  const body = excludeSystem
+    ? `$_.ProcessName -notin @('${excludeArr.join("','")}')`
+    : `$true`
+  return [
+    `Add-Type @'`,
+    `using System;`,
+    `using System.Runtime.InteropServices;`,
+    `public class MemAPI {`,
+    `  [DllImport("psapi.dll")] public static extern bool EmptyWorkingSet(IntPtr hProcess);`,
+    `}`,
+    `'@`,
+    `$freed = 0`,
+    `$count = 0`,
+    `Get-Process | Where-Object { $_.WorkingSet64 -gt ${thresholdMB} * 1MB -and ${body} } | ForEach-Object {`,
+    `  try {`,
+    `    $before = $_.WorkingSet64`,
+    `    [MemAPI]::EmptyWorkingSet($_.Handle) | Out-Null`,
+    `    $after = (Get-Process -Id $_.Id -ErrorAction SilentlyContinue).WorkingSet64`,
+    `    if ($after -lt $before) { $script:freed += ($before - $after) }`,
+    `    $script:count++`,
+    `  } catch {}`,
+    `}`,
+    `"FREED=$([math]::Round($freed/1MB))"`,
+    `"COUNT=$count"`
+  ].join('\n')
+}
+
+export { formatMem }

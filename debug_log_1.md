@@ -290,3 +290,11 @@
 - 变更简述：System 页面接入——两个 Tab（磁盘碎片 / 内存加速）。磁盘碎片 Tab 列出所有本地盘（盘符/卷标/文件系统/已用进度条），每行「分析」按钮跑 defrag X: /A /V 解析碎片率正则匹配，碎片率 ≥10% 给 warn 徽章；「优化」按钮跑 defrag X: /O（SSD TRIM / HDD 整理），带进度推送订阅 system:defrag-progress 实时显示。内存加速 Tab 显示大数字内存使用率 + 进度条 + Top 10 进程列表 + 一键加速按钮（调 system:memoryBoost，带 system:memory-progress 订阅）。侧边栏 NAV 数组在 optimize 与 schedule 之间插入 system。中英双语各 20 条新词条。
 - 验证：typecheck 通过；build 通过；renderer bundle 308.73 → 323.48 kB（System 页面增量 ~15kB）。
 - 备注：System 页面首次 mounted 自动加载 drives + memory；defraging / boosting 时禁用其他按钮防止并发。i18n 模板变量 {mb}/{n}/{before}/{after}/{pct}/{msg}。
+
+## 40
+
+- 时间：2026-10-30 18:00
+- 模块：src/main/core/system.ts（重构：纯函数抽取 + 去重）、src/main/core/system.test.ts（新增 26 用例）
+- 变更简述：为 system.ts 补单元测试，先把 async 函数里内嵌的正则解析 / JSON 映射 / 脚本生成逻辑抽成 6 个 export 纯函数：`parseDefragPct`（两种 defrag 输出正则）、`mapDriveRaw`（单/多 JSON 对象 → DriveInfo[]）、`mapMemRaw`（JSON → MemoryInfo，含 usedMB/usedPct 计算 + defensive clamp）、`parseBoostOutput`（FREED=/COUNT= 两行解析）、`buildMemBoostScript`（threshold + excludeSystem 参数化的 PowerShell 脚本生成器）、`formatMem`（已 export）。async 函数 listDrives/analyzeDefrag/runDefrag/memoryInfo/memoryBoost 全部改为调用纯函数，消除重复代码。测试文件用 Node 内置 node:assert，零额外依赖，tsx src/main/core/system.test.ts 直接跑。26 个用例覆盖：正则正常/边界/大小写/空串/无匹配；JSON 单对象/数组/缺字段/非法 JSON；百分比 0 与防御性 clamp；FREED/COUNT 正常/CRLF/畸形；脚本默认/自定义 threshold/excludeSystem=false。
+- 验证：26 passed, 0 failed。typecheck 通过；build 通过；main bundle 85.56 → 86.32 kB。
+- 备注：纯函数无副作用、不依赖 Electron、不依赖 runPowerShell，tsx 直接 import system.ts 时连带加载 utils.ts（无 Electron import，也不触发 spawn），测试稳定。
