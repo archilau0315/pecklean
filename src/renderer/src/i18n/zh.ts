@@ -367,5 +367,23 @@ export const zh: Record<string, string> = {
   'system.memTip.title': '说明',
   'system.memTip.1': '内存加速调用 EmptyWorkingSet，把后台进程工作集刷到分页文件',
   'system.memTip.2': '不会杀掉任何进程，几秒后系统会按需把常用数据调回物理内存',
-  'system.memTip.3': '效果短暂但安全，建议在内存吃紧时使用'
+  'system.memTip.3': '效果短暂但安全，建议在内存吃紧时使用',
+
+  // ── DLL / 运行库检测 ──
+  'system.tab.runtime': '运行库检测',
+  'system.rtSummary': '检测结果',
+  'system.rtList': '运行库列表',
+  'system.rtRescan': '重新检测',
+  'system.rtScanning': '检测中…',
+  'system.rtOkCount': '已安装 {ok} / {total}',
+  'system.rtAllGood': '全部运行库齐全，系统无缺失',
+  'system.rtMissing': '缺失 {n} 项',
+  'system.rtInstalled': '已安装',
+  'system.rtMissingOne': '缺失',
+  'system.rtCopyLink': '复制下载链接',
+  'system.rtCopied': '已复制 ✓',
+  'system.rtTip.title': '说明',
+  'system.rtTip.1': '只检测、不下载、不安装——零联网承诺',
+  'system.rtTip.2': '点击「复制下载链接」后，打开浏览器粘贴访问微软官方下载页',
+  'system.rtTip.3': 'Windows 10/11 自带 DirectX 12，若游戏提示缺组件可补装 DirectX End-User Runtime'
 }

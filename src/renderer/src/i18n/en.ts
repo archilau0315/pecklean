@@ -364,5 +364,23 @@ export const en: Record<string, string> = {
   'system.memTip.title': 'Notes',
   'system.memTip.1': 'Boost calls EmptyWorkingSet — flushes background process working sets to the pagefile',
   'system.memTip.2': 'No processes are killed; common data is paged back on demand within seconds',
-  'system.memTip.3': 'Effect is brief but safe — use when memory is tight'
+  'system.memTip.3': 'Effect is brief but safe — use when memory is tight',
+
+  // ── Runtime / DLL checker ──
+  'system.tab.runtime': 'Runtimes',
+  'system.rtSummary': 'Scan result',
+  'system.rtList': 'Runtimes',
+  'system.rtRescan': 'Rescan',
+  'system.rtScanning': 'Scanning…',
+  'system.rtOkCount': '{ok} / {total} installed',
+  'system.rtAllGood': 'All runtimes present — no missing components',
+  'system.rtMissing': '{n} missing',
+  'system.rtInstalled': 'Installed',
+  'system.rtMissingOne': 'Missing',
+  'system.rtCopyLink': 'Copy download link',
+  'system.rtCopied': 'Copied ✓',
+  'system.rtTip.title': 'Notes',
+  'system.rtTip.1': 'Scan only — no downloads, no installs, zero-network promise',
+  'system.rtTip.2': 'Click "Copy download link" then paste in your browser for the official Microsoft page',
+  'system.rtTip.3': 'Win10/11 ships DirectX 12; install DirectX End-User Runtime if games report missing DLLs'
 }

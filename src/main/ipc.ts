@@ -17,6 +17,7 @@ import {
   OPTIMIZE_ITEMS
 } from './core/optimize'
 import { listDrives, analyzeDefrag, runDefrag, memoryInfo, memoryBoost } from './core/system'
+import { scanRuntimes, summarize } from './core/runtime'
 import { AppInfo, UninstallItem, LeftoverItem, ScheduleConfig, Lang } from '../shared/types'
 
 function push(channel: string, payload: unknown): void {
@@ -123,5 +124,11 @@ export function registerIpc(): void {
   ipcMain.handle('system:memoryInfo', () => memoryInfo())
   ipcMain.handle('system:memoryBoost', async () => {
     return memoryBoost({ onProgress: (msg) => push('system:memory-progress', msg) })
+  })
+
+  // ── DLL / 运行库检测 ──
+  ipcMain.handle('runtime:scan', async () => {
+    const items = await scanRuntimes()
+    return { items, summary: summarize(items) }
   })
 }

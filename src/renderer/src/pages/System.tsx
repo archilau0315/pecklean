@@ -27,6 +27,23 @@ interface MemInfo {
   topProcesses: MemTop[]
 }
 
+interface RuntimeRow {
+  id: string
+  name: string
+  category: string
+  installed: boolean
+  version: string | null
+  arch: string
+  downloadUrl: string
+  note?: string
+}
+
+interface RuntimeSummary {
+  ok: number
+  total: number
+  missing: RuntimeRow[]
+}
+
 function fmtSize(mb: number): string {
   if (mb >= 1024) return (mb / 1024).toFixed(1) + ' GB'
   return mb + ' MB'
@@ -34,7 +51,7 @@ function fmtSize(mb: number): string {
 
 export default function System(): React.JSX.Element {
   const { t } = useI18n()
-  const [tab, setTab] = useState<'defrag' | 'memory'>('defrag')
+  const [tab, setTab] = useState<'defrag' | 'memory' | 'runtime'>('defrag')
 
   // ── Defrag state ──
   const [drives, setDrives] = useState<DriveRow[]>([])
@@ -47,6 +64,12 @@ export default function System(): React.JSX.Element {
   const [mem, setMem] = useState<MemInfo | null>(null)
   const [boosting, setBoosting] = useState(false)
   const [boostMsg, setBoostMsg] = useState('')
+
+  // ── Runtime state ──
+  const [runtimes, setRuntimes] = useState<RuntimeRow[]>([])
+  const [rtSummary, setRtSummary] = useState<RuntimeSummary | null>(null)
+  const [rtScanning, setRtScanning] = useState(false)
+  const [rtCopied, setRtCopied] = useState<string>('')
 
   // ── Load on mount ──
   useEffect(() => {
@@ -155,6 +178,28 @@ export default function System(): React.JSX.Element {
     }
   }
 
+  const scanRuntimes = async (): Promise<void> => {
+    setRtScanning(true)
+    setNotice('')
+    try {
+      const res = (await window.api.runtimeScan()) as { items: RuntimeRow[]; summary: RuntimeSummary }
+      setRuntimes(res.items)
+      setRtSummary(res.summary)
+    } finally {
+      setRtScanning(false)
+    }
+  }
+
+  const copyUrl = async (url: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(url)
+      setRtCopied(url)
+      setTimeout(() => setRtCopied(''), 2000)
+    } catch {
+      // 忽略
+    }
+  }
+
   // 内存使用率条颜色
   const memColor = useMemo(() => {
     if (!mem) return ''
@@ -183,9 +228,21 @@ export default function System(): React.JSX.Element {
           >
             {t('system.tab.memory')}
           </button>
-          <button className="btn" onClick={loadDrives} disabled={defraging !== null}>
-            {t('system.refresh')}
+          <button
+            className={`btn ${tab === 'runtime' ? 'primary' : ''}`}
+            onClick={() => { setTab('runtime'); if (runtimes.length === 0) scanRuntimes() }}
+          >
+            {t('system.tab.runtime')}
           </button>
+          {tab === 'runtime' ? (
+            <button className="btn" onClick={scanRuntimes} disabled={rtScanning}>
+              {rtScanning ? t('system.rtScanning') : t('system.rtRescan')}
+            </button>
+          ) : (
+            <button className="btn" onClick={loadDrives} disabled={defraging !== null}>
+              {t('system.refresh')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -304,6 +361,76 @@ export default function System(): React.JSX.Element {
               <div>{t('system.memTip.1')}</div>
               <div>{t('system.memTip.2')}</div>
               <div>{t('system.memTip.3')}</div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════ Runtime Tab ═══════════════════════ */}
+      {tab === 'runtime' && (
+        <>
+          {rtScanning && <div className="result-box">{t('system.rtScanning')}</div>}
+
+          {/* 汇总卡片 */}
+          {rtSummary && (
+            <div className="category">
+              <div className="category-title">{t('system.rtSummary')}</div>
+              <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 24 }}>
+                <div style={{ fontSize: 40, fontWeight: 700, color: rtSummary.missing.length === 0 ? '#7fd4a8' : '#e0a06b' }}>
+                  {rtSummary.ok}/{rtSummary.total}
+                </div>
+                <div style={{ color: '#9aa3b2', fontSize: 13, flex: 1 }}>
+                  <div>{t('system.rtOkCount', { ok: rtSummary.ok, total: rtSummary.total })}</div>
+                  <div style={{ marginTop: 4 }}>
+                    {rtSummary.missing.length === 0
+                      ? t('system.rtAllGood')
+                      : t('system.rtMissing', { n: rtSummary.missing.length })}
+                  </div>
+                </div>
+                {rtSummary.missing.length > 0 && (
+                  <span className="badge warn">{t('system.rtMissing', { n: rtSummary.missing.length })}</span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 列表 */}
+          {runtimes.length > 0 && (
+            <div className="category">
+              <div className="category-title">{t('system.rtList')}</div>
+              {runtimes.map((r) => (
+                <div key={r.id} className="item-row">
+                  <div className="item-name" style={{ fontWeight: 600 }}>{r.name}</div>
+                  <div className="item-samples muted">
+                    {r.version ?? '-'} · {r.arch}
+                    {r.note && <div style={{ color: '#9aa3b2', marginTop: 2 }}>{r.note}</div>}
+                  </div>
+                  {r.installed ? (
+                    <span className="badge on">{t('system.rtInstalled')}</span>
+                  ) : (
+                    <>
+                      <span className="badge warn" style={{ marginRight: 8 }}>{t('system.rtMissingOne')}</span>
+                      <button
+                        className="btn"
+                        onClick={() => copyUrl(r.downloadUrl)}
+                        style={{ fontSize: 12 }}
+                      >
+                        {rtCopied === r.downloadUrl ? t('system.rtCopied') : t('system.rtCopyLink')}
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* 提示 */}
+          <div className="category">
+            <div className="category-title">{t('system.rtTip.title')}</div>
+            <div style={{ padding: '0 12px', lineHeight: 1.8, color: '#9aa3b2', fontSize: 13 }}>
+              <div>{t('system.rtTip.1')}</div>
+              <div>{t('system.rtTip.2')}</div>
+              <div>{t('system.rtTip.3')}</div>
             </div>
           </div>
         </>

@@ -84,7 +84,9 @@ const api = {
     const fn = (_e: unknown, p: unknown): void => cb(String(p))
     ipcRenderer.on('system:memory-progress', fn)
     return () => ipcRenderer.removeListener('system:memory-progress', fn)
-  }
+  },
+
+  runtimeScan: () => ipcRenderer.invoke('runtime:scan')
 }
 
 contextBridge.exposeInMainWorld('api', api)

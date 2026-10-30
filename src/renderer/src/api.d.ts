@@ -95,6 +95,14 @@ interface Api {
     error?: string
   }>
   onSystemMemoryProgress(cb: (msg: string) => void): () => void
+
+  runtimeScan(): Promise<{
+    items: Array<{
+      id: string; name: string; category: string; installed: boolean
+      version: string | null; arch: string; downloadUrl: string; note?: string
+    }>
+    summary: { ok: number; total: number; missing: unknown[] }
+  }>
 }
 
 declare global {

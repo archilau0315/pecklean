@@ -298,3 +298,15 @@
 - 变更简述：为 system.ts 补单元测试，先把 async 函数里内嵌的正则解析 / JSON 映射 / 脚本生成逻辑抽成 6 个 export 纯函数：`parseDefragPct`（两种 defrag 输出正则）、`mapDriveRaw`（单/多 JSON 对象 → DriveInfo[]）、`mapMemRaw`（JSON → MemoryInfo，含 usedMB/usedPct 计算 + defensive clamp）、`parseBoostOutput`（FREED=/COUNT= 两行解析）、`buildMemBoostScript`（threshold + excludeSystem 参数化的 PowerShell 脚本生成器）、`formatMem`（已 export）。async 函数 listDrives/analyzeDefrag/runDefrag/memoryInfo/memoryBoost 全部改为调用纯函数，消除重复代码。测试文件用 Node 内置 node:assert，零额外依赖，tsx src/main/core/system.test.ts 直接跑。26 个用例覆盖：正则正常/边界/大小写/空串/无匹配；JSON 单对象/数组/缺字段/非法 JSON；百分比 0 与防御性 clamp；FREED/COUNT 正常/CRLF/畸形；脚本默认/自定义 threshold/excludeSystem=false。
 - 验证：26 passed, 0 failed。typecheck 通过；build 通过；main bundle 85.56 → 86.32 kB。
 - 备注：纯函数无副作用、不依赖 Electron、不依赖 runPowerShell，tsx 直接 import system.ts 时连带加载 utils.ts（无 Electron import，也不触发 spawn），测试稳定。
+
+## 41
+
+- 时间：2026-10-30 19:00
+- 模块：src/main/index.ts（devtools 端口 9222→9223）、src/main/core/runtime.ts（新增 ~180 行）、src/main/ipc.ts（+1 IPC）、src/preload/index.ts（+1 API）、src/renderer/src/pages/System.tsx（+Runtime Tab）、zh.ts/en.ts（+16 词条）、api.d.ts（+runtimeScan 类型）
+- 变更简述：
+  1. **Dev 启动修复**：index.ts L13 `remote-debugging-port` 从 9222 改 9223——D5 Launcher 抢了 9222
+  2. **DLL/运行库检测**：runtime.ts 新增，scanRuntimes() 用 PowerShell 注册表查询（Uninstall 键 + WOW6432Node）检测 VC++ 2005-2022（6 版本 × 2 架构 = 12 项）、.NET Framework 4.x（Release 注册表映射）、.NET SDK（dotnet --list-sdks）、DirectX Runtime（注册表 InstalledVersion），共 14 项。每项返回 installed/version/arch/downloadUrl（微软官方下载页）+ note。summarize() 汇总 ok/missing。PowerShell 脚本用数组 join 避免 TS 模板字符串 `${}` 和 PowerShell `$var` 冲突——这是从 optimize.ts 里 buildBackupAndSetScript 踩过的坑。
+  3. **System 页面 Runtime Tab**：点击"运行库检测"Tab 自动触发扫描，显示大数字 ok/total 汇总 + 完整列表（名称/版本/架构/状态徽章），缺失项显示 warn 徽章 + "复制下载链接"按钮（navigator.clipboard）。
+- 实测：这台机器 13/14 已安装，仅 VC++ 2005 x86 缺失（老版本极少软件需要）。.NET Framework 4.x Release 表 Win11 上需补更高版本映射。
+- typecheck 通过；build 通过；main bundle 86.32 → 92.14 kB（runtime.ts 增量 ~6kB）；renderer 323.48 → 330.03 kB（+6.5kB）。
+- 备注：零联网承诺——只检测不下载不安装，下载链接复制到剪贴板让用户自己决定。DirectX 在 Win10/11 始终标记 installed=true，只有 note 提示。

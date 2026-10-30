@@ -8,9 +8,9 @@ let win: BrowserWindow | null = null
 /** 计划任务以 --autoclean 启动：静默清理后退出，不显示窗口 */
 const AUTO_CLEAN = process.argv.includes('--autoclean')
 
-// 开发模式开启远程调试，便于自动化验证 UI
+// 开发模式开启远程调试，便于自动化验证 UI；9222 常被其他软件占用，改用 9223
 if (process.env.NODE_ENV === 'development' && !AUTO_CLEAN) {
-  app.commandLine.appendSwitch('remote-debugging-port', '9222')
+  app.commandLine.appendSwitch('remote-debugging-port', '9223')
 }
 
 function createWindow(): void {
