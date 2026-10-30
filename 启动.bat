@@ -1,10 +1,10 @@
 @echo off
 setlocal
-title 啄净 Pecklean Launcher
+title 啄·净 Pecklean Launcher
 cd /d "%~dp0"
 
 echo ==========================================
-echo   Pecklean / 啄净 - one click start
+echo   Pecklean / 啄·净 - one click start
 echo ==========================================
 echo.
 

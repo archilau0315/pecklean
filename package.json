@@ -1,7 +1,7 @@
 {
   "name": "pecklean",
   "version": "1.0.0",
-  "description": "啄净 Pecklean：免费自用的 Windows 清理工具",
+  "description": "啄·净 Pecklean：免费自用的 Windows 清理工具",
   "main": "out/main/index.js",
   "author": "匡形无界-啄之堂",
   "private": true,

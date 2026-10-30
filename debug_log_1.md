@@ -105,6 +105,13 @@
 - 变更简述：项目目录从 surperclean 改为 pecklean，包名同步改为 pecklean，readme 目录树同步；Git 仓库随目录迁移，历史提交完整保留
 - 备注：旧目录被当前编辑器进程占用无法直接改名，改用 robocopy 全量迁移（含 .git、node_modules），新旧目录内容一致；确认新目录 typecheck/build 通过后启动验证
 
+## 16
+
+- 时间：2026-10-30
+- 模块：启动.bat、package.json、readme.md、src/renderer/src/i18n/zh.ts、src/main/index.ts、src/renderer/index.html
+- 变更简述：应用中文名「啄净」改为「啄·净」，中间加间隔号，同步更新窗口标题、页面 title、启动脚本、包描述、readme 标题、中文词典 app.name/app.title
+- 备注：仅改显示用中文名，包名 pecklean、计划任务名等内部标识不变；debug_log 历史记录中的「啄净」保留不改
+
 
 
 

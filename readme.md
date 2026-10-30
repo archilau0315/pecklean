@@ -1,4 +1,4 @@
-# 啄净 · Pecklean
+# 啄·净 · Pecklean
 
 > 免费、纯净、无广告的 Windows 清理工具
 

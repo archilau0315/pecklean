@@ -1,8 +1,8 @@
 /** 中文词典（基准语言，扁平 key） */
 
 export const zh: Record<string, string> = {
-  'app.title': '啄净 清理工具',
-  'app.name': '啄净',
+  'app.title': '啄·净 清理工具',
+  'app.name': '啄·净',
 
   // ── 导航 ──
   'nav.home': '首页',
