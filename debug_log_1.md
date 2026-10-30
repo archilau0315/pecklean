@@ -266,3 +266,11 @@
 - 变更简述：applyOptimize / undoOptimize 全部 async 化，HKCU 路径普通权限直接 reg add/del，HKLM 路径合并成一段 PowerShell 走 runElevated（只弹一次 UAC，减少打断）。item 定义里增加 admin 字段自动标记是否含 HKLM，scanOptimize 返回的 OptimizeScanItem 也带 admin。前端 Optimize 页面每行显示 UAC 徽章。scan 阶段不尝试管理员查询——runElevated 的 Start-Process -Verb RunAs 拉起的管理员进程 stdout 父进程拿不到，空跑只会白弹 UAC。
 - 验证：_verify_optimize.ts 跑通，14 项扫描正确：ADMIN 6 项（privacy.telemetry/diagnostics/clipboardHistory/activityHistory + perf.backgroundApps + usb.writeCache），NORMAL 8 项，已应用 2/14（perf.visualEffects + explorer.hideExtensions）。
 - 备注：scanOptimize 普通权限读 HKLM 读不到（返回 null）→ HKLM 项判未应用是合理的（遥测/诊断默认就是开启的状态）。applyOptimize 先备份 HKCU 原值，HKLM 原值由于普通权限读不到 → backup 里 original=null → 还原阶段对 HKLM 执行 reg delete（回到默认值）。这是安全的权衡：管理员项的 backup 不是完整原值快照，而是"默认关 = 应用前，默认开 = 还原后"。
+
+## 37
+
+- 时间：2026-10-30 16:00
+- 模块：src/main/core/optimize.ts + os/crypto import，新增 buildBackupAndSetScript 函数，重写 applyOptimize 第三步 HKLM 备份
+- 变更简述：管理员 apply HKLM 不再只用 buildSetScript 直接 reg add——改成一段 PowerShell 先 reg query 所有 HKLM 原值写 JSON 临时文件（$env:TEMP/pecklean_backup_<uuid>.json），再 reg add 设置目标值。runElevated 返回后父进程读临时文件，把 JSON 里的原值合并进 backup 对应的 snapshots（HKLM 项 original 从 null 变成真实原值）。finally 里 unlinkSync 清理。undoOptimize 自动受益——还原 HKLM 时不再是 reg delete（回到默认值），而是 reg add 原值（精确回滚）。只弹一次 UAC。
+- 验证：typecheck 通过；build 通过；临时文件路径 os.tmpdir() + crypto.randomUUID() 避免冲突；JSON key 为 "key|value" 格式，ConvertTo-Json -Compress 紧凑输出；单引号转义 op.key.replace(/'/g, "''") 兼容 PowerShell。
+- 备注：buildBackupAndSetScript 生成的脚本每条 reg query 独立 try/catch，某键不存在 → $null → JSON 里该值就是 null → 还原时 reg delete（正确行为：原值不存在，应用后删除，还原后也不存在）。

@@ -12,6 +12,8 @@ import { exec, execSync } from 'child_process'
 import { promisify } from 'util'
 import * as fs from 'fs'
 import * as path from 'path'
+import os from 'os'
+import crypto from 'crypto'
 import { runElevated } from './utils'
 
 const pExec = promisify(exec)
@@ -277,6 +279,27 @@ function buildDelScript(ops: Array<{ key: string; value: string }>): string {
     .join(' ; ')
 }
 
+/** 生成 PowerShell：先查询所有 HKLM 原值写入 JSON 临时文件，再批量 reg add 设置目标值 */
+function buildBackupAndSetScript(ops: RegOp[], tempFile: string): string {
+  const lines: string[] = ['$bk = @{}']
+  for (const op of ops) {
+    const escapedKey = op.key.replace(/'/g, "''")
+    const escapedVal = op.value.replace(/'/g, "''")
+    const bkKey = `${op.key}|${op.value}`
+    // 查询原值
+    lines.push(`try {`)
+    lines.push(`  $pv = Get-ItemProperty -Path 'Registry::${escapedKey}' -Name '${escapedVal}' -ErrorAction SilentlyContinue`)
+    lines.push(`  if ($null -eq $pv) { $bk['${bkKey.replace(/'/g, "''")}'] = $null } else { $bk['${bkKey.replace(/'/g, "''")}'] = [string]$pv.'${escapedVal}' }`)
+    lines.push(`} catch { $bk['${bkKey.replace(/'/g, "''")}'] = $null }`)
+    // 设置新值
+    const t = op.type.replace('REG_', '').toLowerCase()
+    const v = String(op.target)
+    lines.push(`reg add "${op.key}" /v "${op.value}" /t ${t} /d "${v}" /f 2>$null | Out-Null`)
+  }
+  lines.push(`$bk | ConvertTo-Json -Compress | Set-Content -Path '${tempFile.replace(/'/g, "''")}' -Encoding UTF8`)
+  return lines.join("\n")
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // 扫描：Promise<OptimizeScanItem[]>
 // ═══════════════════════════════════════════════════════════════════
@@ -379,12 +402,30 @@ export async function applyOptimize(itemIds: string[]): Promise<OptimizeApplyRes
 
   // 第三步：管理员 apply HKLM（合并成一段 PowerShell，只弹一次 UAC）
   if (adminItems.length > 0) {
-    // 备份 HKLM 原值（普通权限读不到，所以管理员脚本里也顺便备份）
-    // 简化处理：当前备份里 HKLM 项 original=null 保持 null
     const allAdminOps = adminItems.flatMap((x) => x.ops)
-    const ps = buildSetScript(allAdminOps)
+    const tempPath = path.join(os.tmpdir(), 'pecklean_backup_' + crypto.randomUUID() + '.json')
+    const ps = buildBackupAndSetScript(allAdminOps, tempPath)
     try {
       await runElevated(ps, 60000)
+      // 管理员脚本把原值写到 tempPath，读回来合并进 backup
+      try {
+        if (fs.existsSync(tempPath)) {
+          const raw = fs.readFileSync(tempPath, 'utf-8')
+          const bkMap: Record<string, string | null> = JSON.parse(raw)
+          for (const { item, ops } of adminItems) {
+            const snapshots = backup[item.id] ?? []
+            for (const op of ops) {
+              const bkKey = `${op.key}|${op.value}`
+              const original = bkMap[bkKey] ?? null
+              const snap = snapshots.find((s) => s.key === op.key && s.value === op.value)
+              if (snap) snap.original = original
+              else snapshots.push({ key: op.key, value: op.value, type: op.type, original })
+            }
+            backup[item.id] = snapshots
+          }
+          saveBackup(backup)
+        }
+      } catch { /* JSON 解析失败就保持原 null，不影响应用 */ }
     } catch (e) {
       // 用户取消 UAC — 记录 errors
       for (const { item, ops } of adminItems) {
@@ -396,6 +437,8 @@ export async function applyOptimize(itemIds: string[]): Promise<OptimizeApplyRes
           needRestartExplorer: item.needRestartExplorer
         })
       }
+    } finally {
+      try { fs.unlinkSync(tempPath) } catch {}
     }
   }
 
