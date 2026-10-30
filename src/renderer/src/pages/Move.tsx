@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatBytes } from './fmt'
 import { useI18n } from '../i18n'
 import { movePresetName } from '../i18n/helpers'
@@ -17,6 +17,19 @@ export default function Move(): React.JSX.Element {
   const [progress, setProgress] = useState<MoveProgress | null>(null)
   const [msg, setMsg] = useState('')
   const [failed, setFailed] = useState(false)
+
+  // 目标位置按「存放目录\源目录名」展示，与实际执行逻辑保持一致
+  const actualDest = useMemo(() => {
+    const d = dest.trim().replace(/[\\/]+$/, '')
+    const s = src.trim().replace(/[\\/]+$/, '')
+    if (!d || !s) return ''
+    const name = s.split(/[\\/]/).pop() ?? ''
+    if (!name) return d
+    const low = d.toLowerCase()
+    const nl = name.toLowerCase()
+    if (low === nl || low.endsWith(`\\${nl}`) || low.endsWith(`/${nl}`)) return d
+    return `${d}${d.includes('\\') ? '\\' : '/'}${name}`
+  }, [src, dest])
 
   useEffect(() => {
     Promise.all([window.api.movePresets(), window.api.moveDrives()]).then(([p, d]) => {
@@ -70,7 +83,7 @@ export default function Move(): React.JSX.Element {
 
   const start = async (): Promise<void> => {
     if (!src.trim() || !dest.trim()) return
-    if (!confirm(t('move.confirm', { src, dest }))) return
+    if (!confirm(t('move.confirm', { src, dest: actualDest || dest }))) return
     setBusy(true)
     setMsg('')
     setFailed(false)
@@ -159,6 +172,7 @@ export default function Move(): React.JSX.Element {
           </button>
         </div>
         {src && size > 0 && <div className="muted small">{t('move.sizeHint', { size: formatBytes(size) })}</div>}
+        {src.trim() && actualDest && <div className="muted small">{t('move.actualDest', { path: actualDest })}</div>}
 
         {progress && (
           <div className="progressbar">

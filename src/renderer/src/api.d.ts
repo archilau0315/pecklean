@@ -35,7 +35,7 @@ interface Api {
   processKill(pid: number, lang: Lang): Promise<{ ok: boolean; message: string }>
   bigRoots(): Promise<string[]>
   findBig(roots: string[], minMB: number): Promise<BigFileItem[]>
-  findDup(root: string): Promise<DuplicateGroup[]>
+  findDup(roots: string[]): Promise<DuplicateGroup[]>
   deleteFiles(paths: string[]): Promise<{ files: number; errors: string[] }>
   onBigProgress(cb: (p: string) => void): () => void
   onDupProgress(cb: (p: number) => void): () => void

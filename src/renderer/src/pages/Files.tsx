@@ -7,20 +7,25 @@ export default function Files(): React.JSX.Element {
   const { t } = useI18n()
   const [tab, setTab] = useState<'big' | 'dup'>('big')
   const [roots, setRoots] = useState<string[]>([])
-  const [root, setRoot] = useState('')
   const [minMB, setMinMB] = useState(100)
   const [bigFiles, setBigFiles] = useState<BigFileItem[]>([])
   const [bigChecked, setBigChecked] = useState<Set<string>>(new Set())
   const [dupGroups, setDupGroups] = useState<DuplicateGroup[]>([])
   const [dupChecked, setDupChecked] = useState<Set<string>>(new Set())
+  const [dupMode, setDupMode] = useState<'all' | 'drives' | 'folders'>('all')
+  const [drives, setDrives] = useState<string[]>([])
+  const [diskPick, setDiskPick] = useState<string[]>([])
+  const [folders, setFolders] = useState<string[]>([])
+  const [scope, setScope] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState('')
   const [msg, setMsg] = useState('')
 
   useEffect(() => {
-    window.api.bigRoots().then((r) => {
-      setRoots(r)
-      setRoot(r[0] ?? '')
+    window.api.bigRoots().then(setRoots)
+    window.api.moveDrives().then((d) => {
+      setDrives(d)
+      setDiskPick(d)
     })
   }, [])
 
@@ -38,19 +43,36 @@ export default function Files(): React.JSX.Element {
     }
   }
 
+  /** 全盘模式取本机所有磁盘；指定磁盘/文件夹模式取用户勾选的范围 */
+  const dupRoots = async (): Promise<string[]> => {
+    if (dupMode === 'all') return await window.api.moveDrives()
+    if (dupMode === 'drives') return diskPick
+    return folders
+  }
+
   const scanDup = async (): Promise<void> => {
-    if (!root) return
+    const target = await dupRoots()
+    if (!target.length) {
+      setMsg(t('files.dupNoTarget'))
+      return
+    }
     setBusy(true)
     setDupGroups([])
     setDupChecked(new Set())
+    setScope(target)
     const off = window.api.onDupProgress((n) => setProgress(t('files.progress.dup', { n })))
     try {
-      setDupGroups(await window.api.findDup(root))
+      setDupGroups(await window.api.findDup(target))
     } finally {
       off()
       setBusy(false)
       setProgress('')
     }
+  }
+
+  const addFolder = async (): Promise<void> => {
+    const p = await window.api.pickFolder({ title: t('files.dupAddFolder') })
+    if (p) setFolders((prev) => (prev.includes(p) ? prev : [...prev, p]))
   }
 
   const deleteBig = async (paths: string[]): Promise<void> => {
@@ -182,12 +204,73 @@ export default function Files(): React.JSX.Element {
       {tab === 'dup' && (
         <>
           <div className="filter-row">
-            <span>{t('files.scanDir')}</span>
-            <input className="text-input grow" value={root} onChange={(e) => setRoot(e.target.value)} placeholder={t('files.dupPlaceholder')} />
-            <button className="btn primary" onClick={scanDup} disabled={busy || !root}>
+            <span>{t('files.dupMode')}</span>
+            {(['all', 'drives', 'folders'] as const).map((m) => (
+              <button
+                key={m}
+                className={`chip ${dupMode === m ? 'active' : ''}`}
+                onClick={() => setDupMode(m)}
+                disabled={busy}
+              >
+                {t(`files.mode.${m}`)}
+              </button>
+            ))}
+            <span className="spacer" />
+            <button className="btn primary" onClick={scanDup} disabled={busy}>
               {t('files.scan')}
             </button>
           </div>
+
+          {dupMode === 'all' && (
+            <div className="muted small" style={{ marginBottom: 10 }}>
+              {t('files.mode.allHint', { drives: drives.join('、') })}
+            </div>
+          )}
+
+          {dupMode === 'drives' && (
+            <div className="filter-row">
+              {drives.map((d) => (
+                <label key={d} className="chip">
+                  <input
+                    type="checkbox"
+                    checked={diskPick.includes(d)}
+                    disabled={busy}
+                    onChange={() =>
+                      setDiskPick((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]))
+                    }
+                  />
+                  {d}
+                </label>
+              ))}
+            </div>
+          )}
+
+          {dupMode === 'folders' && (
+            <>
+              <div className="filter-row">
+                <button className="btn" onClick={addFolder} disabled={busy}>
+                  {t('files.dupAddFolder')}
+                </button>
+                {!folders.length && <span className="muted small">{t('files.mode.foldersHint')}</span>}
+              </div>
+              {folders.map((f) => (
+                <div key={f} className="filter-row">
+                  <span className="item-samples grow" title={f}>
+                    {f}
+                  </span>
+                  <button className="btn small" onClick={() => setFolders((prev) => prev.filter((x) => x !== f))} disabled={busy}>
+                    {t('files.dupRemove')}
+                  </button>
+                </div>
+              ))}
+            </>
+          )}
+
+          {!busy && scope.length > 0 && (
+            <div className="muted small" style={{ marginBottom: 10 }}>
+              {t('files.dupScope', { list: scope.join('、') })}
+            </div>
+          )}
           {dupGroups.length > 0 && (
             <div className="page-head">
               <span className="muted">

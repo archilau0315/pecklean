@@ -4,7 +4,7 @@ import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
 import os from 'os'
 import path from 'path'
-import { deletePath, expand, runElevated, walkFiles, formatBytes } from './utils'
+import { deletePath, expand, runElevated, runPowerShell, walkFiles, formatBytes } from './utils'
 import { pick } from '../lang'
 import { MovePreset, MoveProgress, MoveResult, Lang } from '../../shared/types'
 
@@ -55,9 +55,21 @@ export function defaultTarget(src: string, drive: string): string {
   return path.join(`${letter}:`, 'PeckleanMove', path.basename(src))
 }
 
-/** 可用盘符（本机固定磁盘） */
+/** 可用盘符（本机固定磁盘，排除网络盘/光驱，避免全盘扫描拖垮网络共享） */
 export async function listDrives(): Promise<string[]> {
   const drives: string[] = []
+  try {
+    const out = await runPowerShell(
+      'Get-CimInstance Win32_LogicalDisk -Filter "DriveType=3" | ForEach-Object { $_.DeviceID }'
+    )
+    for (const line of out.split(/\r?\n/)) {
+      const m = line.trim().match(/^([A-Za-z]:)$/)
+      if (m && existsSync(`${m[1]}\\`)) drives.push(m[1].toUpperCase())
+    }
+  } catch {
+    /* CIM 不可用时走下面的兜底枚举 */
+  }
+  if (drives.length) return drives
   for (const letter of 'CDEFGHIJKLMNOPQRSTUVWXYZ') {
     const root = `${letter}:\\`
     if (!existsSync(root)) continue
@@ -79,16 +91,69 @@ export async function moveDirectory(
   lang: Lang = 'zh'
 ): Promise<MoveResult> {
   const src = path.resolve(expand(srcRaw))
-  const dest = path.resolve(expand(destRaw))
+  let dest = path.resolve(expand(destRaw))
   const st = await fs.lstat(src).catch(() => null)
   if (!st?.isDirectory()) {
     return { ok: false, message: pick(lang, '源目录不存在或不是文件夹', 'Source folder does not exist or is not a folder') }
   }
-  if (existsSync(dest)) {
-    return {
-      ok: false,
-      message: pick(lang, '目标位置已存在同名文件夹，请更换', 'A folder with the same name already exists at the destination')
+
+  // 选择框返回的必然是已存在的目录，此时它是“存放位置（父目录）”，
+  // 真正的目标为 dest\<源目录名>；只有该同名子目录里已有文件时才算冲突。
+  const srcName = path.basename(src)
+  if (dest.toLowerCase() === src.toLowerCase()) {
+    return { ok: false, message: pick(lang, '目标位置与源目录相同，请更换', 'Destination is the same as the source folder') }
+  }
+  const destStat = await fs.lstat(dest).catch(() => null)
+  if (destStat) {
+    if (!destStat.isDirectory() || destStat.isSymbolicLink()) {
+      return {
+        ok: false,
+        message: pick(lang, '目标位置已存在同名文件，请更换', 'A file with the same name already exists at the destination')
+      }
     }
+    if (path.basename(dest).toLowerCase() === srcName.toLowerCase()) {
+      // 选中的目录本身就是同名目标：空目录可继续，有内容才算真冲突
+      if (await hasEntries(dest)) {
+        return {
+          ok: false,
+          message: pick(
+            lang,
+            `目标位置已存在同名文件夹：${dest}，请更换`,
+            `A folder with the same name already exists: ${dest}`
+          )
+        }
+      }
+    } else {
+      const child = path.join(dest, srcName)
+      const childStat = await fs.lstat(child).catch(() => null)
+      if (childStat) {
+        if (!childStat.isDirectory() || childStat.isSymbolicLink()) {
+          return {
+            ok: false,
+            message: pick(
+              lang,
+              `目标位置已存在同名文件：${child}，请更换`,
+              `A file with the same name already exists: ${child}`
+            )
+          }
+        }
+        if (await hasEntries(child)) {
+          return {
+            ok: false,
+            message: pick(
+              lang,
+              `目标位置已存在同名文件夹：${child}，请更换`,
+              `A folder with the same name already exists: ${child}`
+            )
+          }
+        }
+      }
+      dest = child
+    }
+  }
+
+  if (dest.toLowerCase() === src.toLowerCase()) {
+    return { ok: false, message: pick(lang, '目标位置与源目录相同，请更换', 'Destination is the same as the source folder') }
   }
   if (dest.toLowerCase().startsWith(src.toLowerCase() + path.sep)) {
     return { ok: false, message: pick(lang, '目标目录不能放在源目录内部', 'Destination cannot be inside the source folder') }
@@ -101,7 +166,7 @@ export async function moveDirectory(
 
   // 目标盘剩余空间检查
   try {
-    const fsStat = await fs.statfs(path.dirname(dest))
+    const fsStat = await fs.statfs(path.parse(dest).root)
     const free = Number(fsStat.bavail) * Number(fsStat.bsize)
     if (free < srcStat.bytes * 1.05) {
       return {
@@ -114,8 +179,9 @@ export async function moveDirectory(
       }
     }
   } catch {
-    await fs.mkdir(path.dirname(dest), { recursive: true }).catch(() => null)
+    /* 空间查询失败不阻断搬移 */
   }
+  await fs.mkdir(path.dirname(dest), { recursive: true }).catch(() => null)
 
   onProgress?.({ phase: pick(lang, '正在复制文件…', 'Copying files…'), percent: 0 })
   const copyCode = await robocopy(src, dest, onProgress, lang)
@@ -158,18 +224,23 @@ try {
   Rename-Item -LiteralPath $bak -NewName '${esc(path.basename(src))}'
   throw
 }
-try { Remove-Item -LiteralPath $bak -Recurse -Force -ErrorAction SilentlyContinue } catch {}
+try { [System.IO.Directory]::Delete($bak, $true) } catch {}
 `
+  // Junction 不需要管理员权限：先用普通权限创建，失败再提权兜底（避免每次都弹 UAC）
   try {
-    await runElevated(script, 600000)
-  } catch (e) {
-    return {
-      ok: false,
-      message: pick(
-        lang,
-        `创建目录链接失败：${(e as Error).message}（数据已复制到 ${dest}）`,
-        `Failed to create the folder link: ${(e as Error).message} (data copied to ${dest})`
-      )
+    await runPowerShell(script, 600000)
+  } catch {
+    try {
+      await runElevated(script, 600000)
+    } catch (e) {
+      return {
+        ok: false,
+        message: pick(
+          lang,
+          `创建目录链接失败：${(e as Error).message}（数据已复制到 ${dest}）`,
+          `Failed to create the folder link: ${(e as Error).message} (data copied to ${dest})`
+        )
+      }
     }
   }
 
@@ -194,6 +265,15 @@ try { Remove-Item -LiteralPath $bak -Recurse -Force -ErrorAction SilentlyContinu
   }
 }
 
+/** 目录内是否已有内容（读不到时按有内容处理，避免误判可覆盖） */
+async function hasEntries(dir: string): Promise<boolean> {
+  try {
+    return (await fs.readdir(dir)).length > 0
+  } catch {
+    return true
+  }
+}
+
 function esc(s: string): string {
   return s.replace(/'/g, "''")
 }
@@ -201,14 +281,14 @@ function esc(s: string): string {
 /** 调 robocopy，成功返回退出码（<8 表示成功） */
 function robocopy(src: string, dest: string, onProgress?: (p: MoveProgress) => void, lang: Lang = 'zh'): Promise<number> {
   return new Promise((resolveP) => {
-    const args = [src, dest, '/E', '/COPY:DAT', '/R:1', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS', '/NP', '/MT:8']
+    const args = [src, dest, '/E', '/COPY:DAT', '/R:1', '/W:1', '/NFL', '/NDL', '/NJH', '/NJS', '/MT:8']
     const proc = spawn('robocopy.exe', args, { windowsHide: true })
     let lastPct = 0
     const onData = (d: Buffer): void => {
       const text = d.toString()
-      const matches = text.match(/(\d{1,3})%/g)
+      const matches = text.match(/(\d{1,3}(?:\.\d+)?)%/g)
       if (matches) {
-        const pct = Math.min(99, parseInt(matches[matches.length - 1], 10))
+        const pct = Math.min(99, Math.floor(parseFloat(matches[matches.length - 1])))
         if (pct > lastPct) {
           lastPct = pct
           onProgress?.({ phase: pick(lang, '正在复制文件…', 'Copying files…'), percent: pct })

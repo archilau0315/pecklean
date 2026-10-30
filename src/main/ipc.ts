@@ -65,8 +65,8 @@ export function registerIpc(): void {
   )
   ipcMain.handle(
     'files:duplicates',
-    (_e, root: string) =>
-      findDuplicates(root, (scanned) => push('files:dup-progress', scanned))
+    (_e, roots: string[]) =>
+      findDuplicates(roots, (scanned) => push('files:dup-progress', scanned))
   )
   ipcMain.handle('files:delete', (_e, paths: string[]) => deleteFiles(paths))
 

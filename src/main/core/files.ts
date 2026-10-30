@@ -1,19 +1,9 @@
 /** 大文件与重复文件引擎：按体积筛选大文件，按「大小 → 头部哈希 → MD5」找重复 */
-import { promises as fs } from 'fs'
+import { promises as fs, existsSync } from 'fs'
 import path from 'path'
 import os from 'os'
-import { md5File, walkFiles } from './utils'
+import { expand, md5File, walkFiles } from './utils'
 import { BigFileItem, DuplicateGroup } from '../../shared/types'
-
-const SKIP_DIRS = new Set([
-  'windows',
-  'program files',
-  'program files (x86)',
-  'programdata',
-  '$recycle.bin',
-  'system volume information',
-  'appdata'
-])
 
 /** 扫描大文件（默认从用户目录找 >= minMB 的文件） */
 export async function findBigFiles(
@@ -49,21 +39,50 @@ export const DEFAULT_BIG_ROOTS = [
   path.join(os.homedir(), 'Desktop')
 ]
 
+/** 规范化搜索范围：盘符容错、去重、剔除被其它根目录包含的路径，避免同一文件被重复统计 */
+export function normalizeRoots(roots: string[]): string[] {
+  const abs: string[] = []
+  for (const raw of roots) {
+    const s = (raw || '').trim()
+    if (!s) continue
+    // 盘符单独处理：path.resolve('D:') 依赖当前工作目录，可能解析成当前盘
+    const p = /^[A-Za-z]:$/.test(s) ? `${s[0].toUpperCase()}:\\` : path.resolve(expand(s))
+    if (!existsSync(p)) continue
+    abs.push(p)
+  }
+  abs.sort((a, b) => a.length - b.length)
+  const out: string[] = []
+  for (const p of abs) {
+    const low = p.toLowerCase()
+    const covered = out.some((q) => {
+      const ql = q.toLowerCase().replace(/[\\/]+$/, '')
+      return low === ql || low.startsWith(`${ql}\\`)
+    })
+    if (!covered) out.push(p)
+  }
+  return out
+}
+
 /** 重复文件查找：按大小分组 → 头部 256KB 预哈希 → 全量 MD5 */
 export async function findDuplicates(
-  root: string,
+  rootsRaw: string[],
   onProgress?: (scanned: number) => void
 ): Promise<DuplicateGroup[]> {
+  const roots = normalizeRoots(rootsRaw)
+  if (!roots.length) return []
   const bySize = new Map<number, string[]>()
   let scanned = 0
-  await walkFiles(root, (full, size) => {
-    if (size === 0) return
-    scanned++
-    if (scanned % 200 === 0) onProgress?.(scanned)
-    const arr = bySize.get(size)
-    if (arr) arr.push(full)
-    else bySize.set(size, [full])
-  })
+  for (const root of roots) {
+    await walkFiles(root, (full, size) => {
+      if (size === 0) return
+      scanned++
+      if (scanned % 200 === 0) onProgress?.(scanned)
+      const arr = bySize.get(size)
+      if (arr) arr.push(full)
+      else bySize.set(size, [full])
+    })
+  }
+  onProgress?.(scanned)
 
   // 只处理同大小 >=2 的组
   const sizeGroups = [...bySize.entries()].filter(([, files]) => files.length >= 2)

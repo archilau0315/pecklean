@@ -27,7 +27,7 @@ const api = {
 
   bigRoots: () => ipcRenderer.invoke('files:bigRoots'),
   findBig: (roots: string[], minMB: number) => ipcRenderer.invoke('files:big', roots, minMB),
-  findDup: (root: string) => ipcRenderer.invoke('files:duplicates', root),
+  findDup: (roots: string[]) => ipcRenderer.invoke('files:duplicates', roots),
   deleteFiles: (paths: string[]) => ipcRenderer.invoke('files:delete', paths),
   onBigProgress: (cb: (p: unknown) => void) => {
     const fn = (_e: unknown, p: unknown) => cb(p)
