@@ -193,7 +193,7 @@ export async function scanPrivacy(): Promise<PrivacyItem[]> {
   const items: PrivacyItem[] = []
   for (const r of RULES) {
     const count = await r.count().catch(() => 0)
-    items.push({ id: r.id, name: r.name, desc: r.desc, count })
+    if (count > 0) items.push({ id: r.id, name: r.name, desc: r.desc, count })
   }
   return items
 }

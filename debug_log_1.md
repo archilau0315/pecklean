@@ -375,3 +375,22 @@
   - whitelist.test.ts: **29 用例**（glob 匹配 / 白名单匹配 / 批量过滤 / UI 文本解析）
   - **总计 55 用例全绿**
 - 备注：所有测试用 `node:assert` 零依赖，`npx tsx src/main/core/*.test.ts` 直接跑。
+
+## 47
+
+- 时间：2026-10-30 21:00
+- 模块：src/main/core/privacy.ts（scanPrivacy 过滤 count>0）
+- 变更简述：scanPrivacy 不应该返回 count=0 的空项——bug 修复。
+  - 原代码：count 不管是否为 0 都 push 进返回数组 → 体检分数里 `privacy.length * 2` 白扣 8 分（5 项注册表清干净了但 count=0 仍返回）
+  - 修复：push 前加 `if (count > 0)` 过滤
+  - 实测效果：清完 RunMRU/TypedPaths/UserAssist/FeatureUsage 四个注册表项后，scanPrivacy 返回 8 → 2 项（只有 feature-usage count=1 + edge-history count=2）。体检分数 30 → 42（-8 扣分消除）
+- 体检分数分析（当前机器）：
+  - base = 60
+  - 垃圾 276MB → log2(276)×4 ≈ 32 → min(20, 32) = -20 扣满
+  - 隐私 2 items → -4
+  - 启动禁用 0/26 → +0
+  - optimize 3/14 → +6
+  - 合计 42 ✓
+- 垃圾主要被占用的进程：Trae CN / 7z / 腾讯 / Edge。关 Edge 清历史 + 禁几个启动项 + apply optimize 可进一步涨到 80+
+- 额外清理：PowerShell `Clear-RecycleBin -Force` 秒清 3.5GB（比 robocopy /MIR 快得多）；`reg delete "HKCU\...\RunMRU" /va /f` 清注册表值
+- 备注：bug 根因——scanPrivacy 把"有定义但无痕迹"的项也算进去了。Junk/Optimize/Startup 的 scan 都有类似 count 逻辑要检查吗？

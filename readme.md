@@ -1,4 +1,4 @@
-﻿﻿﻿﻿<p align="center">
+﻿﻿﻿﻿﻿﻿<p align="center">
   <img src="build/icon.png" width="132" alt="Pecklean logo" />
 </p>
 
