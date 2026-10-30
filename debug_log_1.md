@@ -193,3 +193,10 @@
 - 模块：src/renderer/src/assets/logo.png、build/icon.png、build/icon.ico、package.json
 - 变更简述：啄木鸟眼睛绿色圆（质心 302,208，半径 ≈ 32）内添加白色小圆点高光，位置从眼睛中心向左上偏移约 0.36r（高光 r ≈ 8）。同时导出 build/icon.ico（多尺寸 16/32/48/64/128/256），并将 package.json 的 build.win.icon 从 png 改为 ico，使最终 exe 真正带上多尺寸啄木鸟图标（资源管理器、任务栏、Alt+Tab 均正确显示）。眼睛定位用 Python + PIL + numpy 连通域分析：G-R > 30 且 G-B > 20 的像素标记为绿色，BFS 求连通域，筛选面积 500-6000、质心 y < 70% 画布、bbox 接近正方形的块——即眼窝。
 - 备注：32/24px 缩略图肉眼验证高光可见；typecheck、build 通过。上一轮脚本 HSV 转 hue 公式 else 分支写错导致失败，本次改用 RGB 差值 + 连通域，稳健。
+
+## 27
+
+- 时间：2026-10-30 12:05
+- 模块：readme.md、仓库配置
+- 变更简述：readme 全面重做视觉版——居中 logo 头图、徽章行、目录锚点、三大特性卡片表格、与常见清理软件的对比表、Mermaid 架构图、快速开始、模块操作要点表、安全设计、项目结构树、模块职责表、可折叠 FAQ、路线图。同时创建 GitHub 仓库 archilau0315/pecklean 并推送全部提交。
+- 备注：仓库 public，首个推送分支 master 成为默认分支；dist/ 与 out/ 已被 .gitignore 排除，未上传打包产物。
