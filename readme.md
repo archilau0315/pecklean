@@ -147,6 +147,17 @@ flowchart LR
 
 ### 🚀 快速开始
 
+#### 国内镜像（推荐）
+
+代码托管双镜像，根据网络情况任选其一：
+
+| 镜像 | 地址 | 面向 |
+|---|---|---|
+| **Gitee · 国内镜像** | <https://gitee.com/archilau0315/pecklean> | 中国大陆访问 |
+| **GitHub · 国际主仓** | <https://github.com/archilau0315/pecklean> | 海外与开源社区 |
+
+两仓代码保持同步，Commit SHA 一致。
+
 #### 方式一：免安装版（推荐）
 
 直接下载：[Pecklean-1.0.0-x64.exe](https://github.com/archilau0315/pecklean/releases/latest)（77.1 MB），双击即用，无需安装 Node.js 或任何运行库。单个文件复制到其它 64 位 Windows 电脑上也能直接运行。
@@ -400,6 +411,17 @@ flowchart LR
 **Design rule**: the renderer has no Node access. Every system operation lives in the main-process `core/` modules, and destructive paths are validated against a root boundary.
 
 ### 🚀 Quick Start
+
+#### Mirrored repos
+
+Code is mirrored to two hosts — pick whichever works better for you:
+
+| Mirror | URL | Audience |
+|---|---|---|
+| **Gitee · CN mirror** | <https://gitee.com/archilau0315/pecklean> | Mainland China |
+| **GitHub · primary** | <https://github.com/archilau0315/pecklean> | Rest of the world |
+
+Both stay in sync with matching commit SHAs.
 
 #### Option 1 — Portable build (recommended)
 

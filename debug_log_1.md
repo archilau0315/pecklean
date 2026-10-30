@@ -228,3 +228,10 @@
 - 模块：build/cover.png、build/cover_philosophy.md、readme.md
 - 变更简述：按「Chroma Arbor」设计哲学用 PIL 生成 README 封面图——1600×900，深海军蓝底 (#0f1420) 加径向青绿渐变光晕、60px 网格、随机分布的啄点装饰；左侧啄木鸟 icon 置于青绿渐变圆形光晕与细环内；右侧「啄 · 净」用墨绿→青绿横向渐变填充 + glow mask、「Pecklean」纯白、中英双语标语、渐变分割线、6 项功能清单（绿圆点 + 中英双语名）、5 枚技术徽章（Portable 用深色底反衬）、底部元数据栏（GitHub 仓库 + Free·Clean·No Ads·Portable·Fully Local 标语）、左上 ARCHILAU STUDIO 标识。Cover 已嵌进 readme 顶部。
 - 备注：PIL 	extbbox 测中文；gradient 文字用 mask 合成；光晕用 GaussianBlur 叠加；msyhbd.ttc / arialbd.ttf 分别做中英粗体。
+
+## 32
+
+- 时间：2026-10-30 13:25
+- 模块：build/cover.png、readme.md、remote gitee
+- 变更简述：封面图 v2 把底部元数据条改为双镜像显示——左：GitHub · 国际主仓（github.com/archilau0315/pecklean），右：Gitee · 国内镜像（gitee.com/archilau0315/pecklean），中央 Free·Clean·No Ads·Portable·Fully Local 标语。中英双语 readme 的「快速开始」新增镜像对比表。git remote 添加 gitee 指向 https://gitee.com/archilau0315/pecklean.git（仓库需用户手动在 Gitee 网页端创建，因本地凭据是密码而非 access_token 且 SSH key 未绑定 Gitee）。
+- 备注：Gitee 凭据 username=archilau password_len=10，与 GitHub username archilau0315 不匹配；SSH git@gitee.com Permission denied (publickey)。用户在 Gitee 建好仓库后跑 git push gitee master 即可同步。
