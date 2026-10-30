@@ -249,3 +249,12 @@
 - 模块：build/cover.png
 - 变更简述：封面图 v7 修复右侧贴边问题——把右内容块起始位置从 640 左移到 560，ICON_CX=290/halo_r=200/画布 1600×900/右侧安全边距 MARGIN_R=80 (RIGHT_LIMIT=1520)。功能两列总宽 617px，可用空间 960px，完全放得下。徽章行最后一项终止于 RIGHT_LIMIT-溢出保护。啄·净字号降为 96，Pecklean 降为 64，字幕降为 24/19，功能项降为 18/17，整体更紧凑。
 - 备注：啄·净 两个字分两次 mask 合成并在中间画一个独立的渐变圆点，避免单字符串带间隔点的 mask 位移 bug。
+
+## 35
+
+- 时间：2026-10-30 14:30
+- 模块：src/main/core/optimize.ts（新增 440 行）、src/main/ipc.ts（+6 通道）、src/preload/index.ts、src/renderer/src/api.d.ts、src/renderer/src/pages/Optimize.tsx（新增 180 行）、src/renderer/src/pages/Home.tsx（体检区）、src/renderer/src/App.tsx（导航加 optimize）、src/renderer/src/i18n/zh.ts + en.ts（中英双语）
+- 变更简述：新增「系统优化」模块——14 项注册表级可回滚优化，分 6 组（Privacy 4 项 / Perf 3 项 / Explorer 3 项 / Desktop 2 项 / Taskbar 1 项 / USB 1 项）。每项执行前把原值备份到 userData/optimize_backup.json，还原时从备份恢复原值（原值不存在则删值），部分 Explorer 相关项应用后自动重启资源管理器。IPC 通道：optimize:items / optimize:scan / optimize:apply / optimize:undo / optimize:undoAll / optimize:restartExplorer + diagnose:run。「一键全面体检」聚合 junk scan + startup 枚举 + privacy scan + optimize scan，产出 0–100 健康分 + 可清理垃圾量 + 启动项统计 + 隐私痕迹数 + 建议。Home 页加体检卡片（圆环分数 + 三色标注 + 立即体检按钮）。
+- 备注：optimize.ts 的 reg query 路径全部走 HKLM/HKCU 安全区，不碰 Windows CurrentVersion 核心键。Windows 遥测关闭依赖 HKLM→需要管理员，其他多数 HKCU 项普通权限可改。exe 中 Electron main 进程已默认 requestExecutionLevel=user，普通项可直接生效，HKLM 项需提权（啄净已有 runElevated 机制可接入）。
+- 来源：逆向 NetPowerDLLRepair 商业软件后的功能对比，优先落地第一梯队（注册表级可回滚优化 + 一键诊断）。
+- 验证：typecheck 通过；dist 打包 77MB；Home 体检按钮触发后聚合四项扫描。

@@ -59,7 +59,16 @@ const api = {
 
   scheduleGet: () => ipcRenderer.invoke('schedule:get'),
   scheduleSave: (cfg: unknown, lang: string) => ipcRenderer.invoke('schedule:save', cfg, lang),
-  scheduleRunNow: (lang: string) => ipcRenderer.invoke('schedule:runNow', lang)
+  scheduleRunNow: (lang: string) => ipcRenderer.invoke('schedule:runNow', lang),
+
+  optimizeItems: () => ipcRenderer.invoke('optimize:items'),
+  optimizeScan: () => ipcRenderer.invoke('optimize:scan'),
+  optimizeApply: (ids: string[]) => ipcRenderer.invoke('optimize:apply', ids),
+  optimizeUndo: (ids: string[]) => ipcRenderer.invoke('optimize:undo', ids),
+  optimizeUndoAll: () => ipcRenderer.invoke('optimize:undoAll'),
+  optimizeRestartExplorer: () => ipcRenderer.invoke('optimize:restartExplorer'),
+
+  diagnoseRun: () => ipcRenderer.invoke('diagnose:run')
 }
 
 contextBridge.exposeInMainWorld('api', api)

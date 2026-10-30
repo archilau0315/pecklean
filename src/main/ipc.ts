@@ -7,6 +7,15 @@ import { findBigFiles, findDuplicates, deleteFiles, DEFAULT_BIG_ROOTS } from './
 import { listApps, uninstallApp, scanLeftovers, cleanLeftovers } from './core/uninstall'
 import { listPresets, listDrives, dirSize, defaultTarget, moveDirectory } from './core/move'
 import { getScheduleStatus, saveSchedule, runAutoClean } from './core/schedule'
+import {
+  scanOptimize,
+  applyOptimize,
+  undoOptimize,
+  undoAllOptimize,
+  restartExplorer,
+  runFullDiagnosis,
+  OPTIMIZE_ITEMS
+} from './core/optimize'
 import { AppInfo, UninstallItem, LeftoverItem, ScheduleConfig, Lang } from '../shared/types'
 
 function push(channel: string, payload: unknown): void {
@@ -92,4 +101,15 @@ export function registerIpc(): void {
   ipcMain.handle('schedule:get', () => getScheduleStatus())
   ipcMain.handle('schedule:save', (_e, cfg: ScheduleConfig, lang: Lang) => saveSchedule(cfg, lang))
   ipcMain.handle('schedule:runNow', (_e, lang: Lang) => runAutoClean(lang))
+
+  // ── 系统优化 ──
+  ipcMain.handle('optimize:items', () => OPTIMIZE_ITEMS.map((o) => ({ id: o.id, group: o.group, needRestartExplorer: o.needRestartExplorer })))
+  ipcMain.handle('optimize:scan', () => scanOptimize())
+  ipcMain.handle('optimize:apply', (_e, ids: string[]) => applyOptimize(ids))
+  ipcMain.handle('optimize:undo', (_e, ids: string[]) => undoOptimize(ids))
+  ipcMain.handle('optimize:undoAll', () => undoAllOptimize())
+  ipcMain.handle('optimize:restartExplorer', () => restartExplorer())
+
+  // ── 全面体检 ──
+  ipcMain.handle('diagnose:run', () => runFullDiagnosis())
 }

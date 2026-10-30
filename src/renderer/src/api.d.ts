@@ -53,6 +53,27 @@ interface Api {
   scheduleGet(): Promise<ScheduleStatus>
   scheduleSave(cfg: ScheduleConfig, lang: Lang): Promise<ScheduleStatus>
   scheduleRunNow(lang: Lang): Promise<CleanResult>
+
+  // 系统优化
+  optimizeItems(): Promise<{ id: string; group: string; needRestartExplorer?: boolean }[]>
+  optimizeScan(): Promise<{ id: string; group: string; applied: boolean; needRestartExplorer?: boolean }[]>
+  optimizeApply(ids: string[]): Promise<{ itemId: string; ok: boolean; errors: string[]; needRestartExplorer?: boolean }[]>
+  optimizeUndo(ids: string[]): Promise<{ itemId: string; ok: boolean; errors: string[] }[]>
+  optimizeUndoAll(): Promise<{ itemId: string; ok: boolean; errors: string[] }[]>
+  optimizeRestartExplorer(): Promise<void>
+
+  // 全面体检
+  diagnoseRun(): Promise<{
+    score: number
+    junkBytes: number
+    junkFiles: number
+    startupDisabled: number
+    startupTotal: number
+    privacyIds: string[]
+    optimizeApplied: number
+    optimizeTotal: number
+    tips: string[]
+  }>
 }
 
 declare global {
