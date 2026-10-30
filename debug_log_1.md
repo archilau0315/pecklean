@@ -214,3 +214,10 @@
 - 模块：GitHub Release、readme.md、readme.en.md
 - 变更简述：exe 不走仓库提交（77MB 会永久膨胀 git 历史），改为上传 GitHub Release 资产 v1.0.0，直链 https://github.com/archilau0315/pecklean/releases/download/v1.0.0/Pecklean-1.0.0-x64.exe。两个 readme 顶部加醒目的「下载免安装版」按钮（for-the-badge 徽章指向 releases/latest），快速开始改为直接下载并附 SHA-256 校验值。
 - 备注：SHA-256 1436283871B90D5D3415CE5A588C480BE9B6A48212E73E9D777F741613283A53；资产大小 77.1MB；Release 说明含中英双语与 SmartScreen 提示。
+
+## 30
+
+- 时间：2026-10-30 12:55
+- 模块：readme.md、readme.en.md（删除）
+- 变更简述：把中英双语合并进单个 readme.md。顶部保留 logo、双语标语、徽章与下载按钮，下方「简体中文 · English」锚点互跳；正文分「## 中文」「## English」两大块，各自带独立目录锚点，中文仍在最前作为默认阅读区。删除 readme.en.md。
+- 备注：合并后小节层级下沉一级（## 变 ###、### 变 ####），并同步修正英文目录锚点（GitHub 会把 emoji 前缀计入 slug，实际为 #-features 而非 #features）。
