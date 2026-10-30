@@ -242,3 +242,10 @@
 - 模块：build/cover.png、readme.md、git remote gitee
 - 变更简述：修正 Gitee 用户名——仓库地址实际是 gitee.com/archilau/pecklean（archilau 而非 archilau0315）。封面图底部条 Gitee 链接更新为正确用户名；git remote set-url gitee https://gitee.com/archilau/pecklean.git；readme 中 Gitee 镜像链接同步修正。用户确认仓库已在 Gitee 同步推送，commit SHA 9c077d8 匹配。
 - 备注：Gitee Release 附件上传需要 access_token（用户在 gitee.com 设置 → 私人令牌生成），当前凭据是账号密码 100422Lyf# 不是 token；用户需手动去 Release 页面上传 exe 或提供 token 让我代传。
+
+## 34
+
+- 时间：2026-10-30 13:45
+- 模块：build/cover.png
+- 变更简述：封面图 v7 修复右侧贴边问题——把右内容块起始位置从 640 左移到 560，ICON_CX=290/halo_r=200/画布 1600×900/右侧安全边距 MARGIN_R=80 (RIGHT_LIMIT=1520)。功能两列总宽 617px，可用空间 960px，完全放得下。徽章行最后一项终止于 RIGHT_LIMIT-溢出保护。啄·净字号降为 96，Pecklean 降为 64，字幕降为 24/19，功能项降为 18/17，整体更紧凑。
+- 备注：啄·净 两个字分两次 mask 合成并在中间画一个独立的渐变圆点，避免单字符串带间隔点的 mask 位移 bug。
