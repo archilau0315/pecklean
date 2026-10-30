@@ -140,9 +140,11 @@ async function statDirs(dirs: string[]): Promise<number> {
   return total
 }
 
-/** 统计回收站文件数与总大小（PowerShell 递归枚举，绕开 COM 枚举卡死） */
+/** 统计回收站文件数与总大小：先用 robocopy 列表模式（几十万文件约 1 秒），失败回退 PowerShell */
 async function measureRecycle(dirs: string[]): Promise<{ files: number; bytes: number }> {
   if (!dirs.length) return { files: 0, bytes: 0 }
+  const fast = await robocopyMeasure(dirs)
+  if (fast) return fast
   const list = dirs.map((d) => `'${d.replace(/'/g, "''")}'`).join(',')
   const out = await runPowerShell(
     `$c=0;$s=[int64]0; foreach($p in @(${list})){ Get-ChildItem -LiteralPath $p -Recurse -File -Force -ErrorAction SilentlyContinue | ForEach-Object { $c++; $s += $_.Length } }; "{0}|{1}" -f $c,$s`,
@@ -150,6 +152,51 @@ async function measureRecycle(dirs: string[]): Promise<{ files: number; bytes: n
   )
   const [c, s] = out.trim().split('|')
   return { files: parseInt(c || '0', 10) || 0, bytes: parseInt(s || '0', 10) || 0 }
+}
+
+/** robocopy /L 只统计不复制；/BYTES 输出精确字节 */
+async function robocopyMeasure(dirs: string[]): Promise<{ files: number; bytes: number } | null> {
+  const dummy = path.join(os.tmpdir(), 'pecklean-rc-empty')
+  await fs.mkdir(dummy, { recursive: true }).catch(() => null)
+  let files = 0
+  let bytes = 0
+  for (const dir of dirs) {
+    const one = await robocopyCount(dir, dummy)
+    if (!one) return null
+    files += one.files
+    bytes += one.bytes
+  }
+  return { files, bytes }
+}
+
+function robocopyCount(dir: string, dummy: string): Promise<{ files: number; bytes: number } | null> {
+  return new Promise((resolveP) => {
+    const proc = spawn(
+      'robocopy.exe',
+      [dir, dummy, '/L', '/E', '/BYTES', '/MT:32', '/NC', '/NFL', '/NDL', '/NP', '/R:0', '/W:0'],
+      { windowsHide: true }
+    )
+    let out = ''
+    const timer = setTimeout(() => proc.kill(), 120000)
+    proc.stdout.on('data', (d: Buffer) => (out += d.toString()))
+    proc.on('close', () => {
+      clearTimeout(timer)
+      // 汇总表按行固定为「目录 / 文件 / 字节 / 时间」，不依赖本地化标签文字
+      const rows: number[][] = []
+      for (const line of out.split(/\r?\n/)) {
+        const m = line.match(
+          /^[^:\r\n]*:[ \t]+([0-9,]+)[ \t]+([0-9,]+)[ \t]+([0-9,]+)[ \t]+([0-9,]+)[ \t]+([0-9,]+)[ \t]+([0-9,]+)/
+        )
+        if (m) rows.push(m.slice(1, 7).map((x) => parseInt(x.replace(/,/g, ''), 10) || 0))
+      }
+      if (rows.length < 3) return resolveP(null)
+      resolveP({ files: rows[1][0], bytes: rows[2][0] })
+    })
+    proc.on('error', () => {
+      clearTimeout(timer)
+      resolveP(null)
+    })
+  })
 }
 
 async function scanRecycleBin(): Promise<ScanItem> {

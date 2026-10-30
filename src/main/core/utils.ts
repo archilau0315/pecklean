@@ -37,12 +37,15 @@ export function expand(p: string): string {
   })
 }
 
-/** 展开规则里的通配路径（支持 ** 递归与 * 通配），返回存在的绝对目录/文件列表 */
+/** 展开规则里的通配路径（支持 * 通配），返回存在的绝对目录/文件列表 */
 export function resolveGlob(pattern: string): string[] {
-  const abs = expand(pattern)
+  const abs = expand(pattern).replace(/\//g, '\\')
+  const parts = abs.split(/\\+/).filter(Boolean)
   const out: string[] = []
+  // 盘符要单独作为起点，否则 path.join 会拼成 "C:Users" 这种相对盘符路径
+  let start = ''
+  if (parts[0] && /^[A-Za-z]:$/.test(parts[0])) start = parts.shift()! + '\\'
   const walk = (idx: number, cur: string): void => {
-    const parts = abs.split(/[\\/]+/)
     if (idx === parts.length) {
       if (existsSync(cur)) out.push(cur)
       return
@@ -63,7 +66,7 @@ export function resolveGlob(pattern: string): string[] {
       /* 无权限跳过 */
     }
   }
-  walk(0, '')
+  walk(0, start)
   return out
 }
 
