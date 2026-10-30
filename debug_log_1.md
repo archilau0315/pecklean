@@ -147,6 +147,13 @@
 - 变更简述：垃圾清理的扫描与清理支持中途取消。主进程为每次任务建立可取消状态（cancelled 标记 + 子进程集合），`cancelJunk()` 置位并终止正在运行的 robocopy / PowerShell 子进程；扫描规则、逐文件统计、目录删除循环、回收站统计与镜像删除均加入中断检查，取消后返回空扫描结果或已完成的清理统计，并推送 `cancelled` 进度。界面在任务执行时把「开始扫描 / 一键清理」按钮切换为「取消扫描 / 取消清理」，点击即取消，完成后提示已取消；取消清理时保留列表便于再次处理。
 - 备注：harness 9 项断言全部通过：扫描取消命中、7ms 内结束、返回空结果、产生 cancelled 进度、任务状态释放、取消后可再次启动；deletePath 未开始取消不删文件、中途取消保留剩余文件。typecheck、build 通过，需重启应用生效。提权步骤（UAC 弹窗阶段）无法强杀，取消会在该步骤结束后生效。
 
+## 22
+
+- 时间：2026-10-30 10:10
+- 模块：package.json、build/icon.png、readme.md
+- 变更简述：新增 electron-builder 打包能力，产物为免安装单文件 `dist\Pecklean-1.0.0-x64.exe`（约 77 MB，x64，portable 目标，asInvoker 普通权限启动）。打包配置写入 package.json 的 build 字段，新增 `npm run dist` 命令；新增 256×256 应用图标 build/icon.png；readme 增加交付版使用说明（自解压耗时、未签名时的 SmartScreen 提示、重新打包命令）。
+- 备注：打包过程使用本机 Electron 33.4.11 缓存，仅下载 NSIS/7zip/图标包；未配置代码签名，安装包与主程序均跳过签名。真实启动冒烟测试通过：便携 exe 约 6 秒完成自解压并拉起 5 个进程，窗口标题正常显示 Pecklean，随后已全部结束。dist/ 已在 .gitignore 中，打包产物不入库。
+
 
 
 

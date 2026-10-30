@@ -9,7 +9,38 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json"
+    "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
+    "dist": "electron-vite build && electron-builder --win portable"
+  },
+  "build": {
+    "appId": "com.pecklean.desktop",
+    "productName": "Pecklean",
+    "copyright": "Copyright © 2026 匡形无界-啄之堂",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "compression": "normal",
+    "win": {
+      "icon": "build/icon.png",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Pecklean-${version}-x64.${ext}"
+    },
+    "portable": {
+      "requestExecutionLevel": "user"
+    }
   },
   "devDependencies": {
     "@types/node": "^26.6.6",
@@ -17,6 +48,7 @@
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^33.2.0",
+    "electron-builder": "^26.18.0",
     "electron-vite": "^2.3.0",
     "typescript": "^5.6.3",
     "vite": "^5.4.11"
