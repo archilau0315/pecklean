@@ -221,3 +221,10 @@
 - 模块：readme.md、readme.en.md（删除）
 - 变更简述：把中英双语合并进单个 readme.md。顶部保留 logo、双语标语、徽章与下载按钮，下方「简体中文 · English」锚点互跳；正文分「## 中文」「## English」两大块，各自带独立目录锚点，中文仍在最前作为默认阅读区。删除 readme.en.md。
 - 备注：合并后小节层级下沉一级（## 变 ###、### 变 ####），并同步修正英文目录锚点（GitHub 会把 emoji 前缀计入 slug，实际为 #-features 而非 #features）。
+
+## 31
+
+- 时间：2026-10-30 13:10
+- 模块：build/cover.png、build/cover_philosophy.md、readme.md
+- 变更简述：按「Chroma Arbor」设计哲学用 PIL 生成 README 封面图——1600×900，深海军蓝底 (#0f1420) 加径向青绿渐变光晕、60px 网格、随机分布的啄点装饰；左侧啄木鸟 icon 置于青绿渐变圆形光晕与细环内；右侧「啄 · 净」用墨绿→青绿横向渐变填充 + glow mask、「Pecklean」纯白、中英双语标语、渐变分割线、6 项功能清单（绿圆点 + 中英双语名）、5 枚技术徽章（Portable 用深色底反衬）、底部元数据栏（GitHub 仓库 + Free·Clean·No Ads·Portable·Fully Local 标语）、左上 ARCHILAU STUDIO 标识。Cover 已嵌进 readme 顶部。
+- 备注：PIL 	extbbox 测中文；gradient 文字用 mask 合成；光晕用 GaussianBlur 叠加；msyhbd.ttc / arialbd.ttf 分别做中英粗体。

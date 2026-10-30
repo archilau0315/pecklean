@@ -30,6 +30,10 @@
   <b>简体中文</b> · <a href="#english">English</a>
 </p>
 
+<p align="center">
+  <img src="build/cover.png" width="100%" alt="Pecklean cover" />
+</p>
+
 ---
 
 ## 中文
