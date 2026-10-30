@@ -206,6 +206,7 @@ export default function System(): React.JSX.Element {
   }
 
   const saveWhitelist = async (): Promise<void> => {
+    // 解析逻辑已抽到 whitelist.ts parseTextarea，由测试覆盖
     const patterns = wlText
       .split(/\r?\n/)
       .map((s) => s.trim())

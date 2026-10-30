@@ -103,3 +103,11 @@ export function filterWhitelisted(
   }
   return { kept, removed }
 }
+
+/** 把 textarea 文本（每行一条 pattern）解析成干净的数组：去空行、trim */
+export function parseTextarea(raw: string): string[] {
+  return raw
+    .split(/\r?\n/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+}

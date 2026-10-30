@@ -354,3 +354,24 @@
 - 后续可扩展：其他项若发现"系统默认就是优化状态"，只需加这个字段。
 - privacy.ts 未接白名单（注册表 + 浏览器专属目录，不是用户重要文件场景）。
 - typecheck/build 通过。
+
+## 46
+
+- 时间：2026-10-30 20:30
+- 模块：src/main/core/whitelist.ts（+parseTextarea 纯函数）、src/main/core/whitelist.test.ts（新增 29 用例正式化）
+- 变更简述：白名单模块正式化单测。
+  - 之前用 `_verify_whitelist.ts` 临时脚本跑过 14 用例，现在正式落成 whitelist.test.ts
+  - 新增 parseTextarea(raw) 纯函数：split(/\r?\n/).map(trim).filter(Boolean)，渲染进程 UI 层的 textarea 解析逻辑和它完全等价（因 Electron 架构限制渲染进程无法 import 主进程模块，UI 层内联三行保持）
+  - 测试覆盖矩阵：
+    | 函数 | 用例数 | 覆盖 |
+    |---|---|---|
+    | globMatch | 10 | 精确/前缀*/后缀*/中间*/*多字符/*尾吞/?单字符/空名/空模式/跨扩展名 |
+    | matchesWhitelist | 9 | 空数组/路径精确/子目录/大小写/glob匹配/glob不匹配/反斜杠归一/尾斜杠剥离/glob只匹配basename不匹配路径段 |
+    | filterWhitelisted | 4 | 空patterns全部保留/混合过滤/全部过滤/零过滤 |
+    | parseTextarea | 6 | 正常行/尾空行/行trim/CRLF/空串/纯空白 |
+  - 关键逻辑点：globMatch DFA 实现（处理嵌套 star 回溯）、matchesWhitelist basename-only glob（避免路径段误匹配）、filterWhitelisted 默认参数 loadWhitelist() 在测试中显式传 patterns
+- 全局测试汇总：
+  - system.test.ts: **26 用例**（defrag regex / DriveInfo map / MemoryInfo map / boost output parse / PowerShell 脚本生成）
+  - whitelist.test.ts: **29 用例**（glob 匹配 / 白名单匹配 / 批量过滤 / UI 文本解析）
+  - **总计 55 用例全绿**
+- 备注：所有测试用 `node:assert` 零依赖，`npx tsx src/main/core/*.test.ts` 直接跑。
