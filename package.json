@@ -27,7 +27,7 @@
     "asar": true,
     "compression": "normal",
     "win": {
-      "icon": "build/icon.png",
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "portable",

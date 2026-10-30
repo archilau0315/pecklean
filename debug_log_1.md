@@ -186,3 +186,10 @@
 - 模块：renderer/src/assets/logo.png、build/icon.png
 - 变更简述：啄木鸟剪影头部新增圆形眼睛镂空，洞体透出墨绿→青绿渐变底色，40px（侧栏）清晰可辨，32px 仍能看出绿点。同步修复 package.json 开头双 UTF-8 BOM（EF BB BF ×2）导致的 JSON 解析失败——读取时去除多余 U+FEFF，无 BOM 写回。
 - 备注：离屏截图（40/32/24px 三档缩略图 + 5× 放大）核对眼睛识别度，32px 以上无压力。typecheck、build 通过。
+
+## 26
+
+- 时间：2026-10-30 11:40
+- 模块：src/renderer/src/assets/logo.png、build/icon.png、build/icon.ico、package.json
+- 变更简述：啄木鸟眼睛绿色圆（质心 302,208，半径 ≈ 32）内添加白色小圆点高光，位置从眼睛中心向左上偏移约 0.36r（高光 r ≈ 8）。同时导出 build/icon.ico（多尺寸 16/32/48/64/128/256），并将 package.json 的 build.win.icon 从 png 改为 ico，使最终 exe 真正带上多尺寸啄木鸟图标（资源管理器、任务栏、Alt+Tab 均正确显示）。眼睛定位用 Python + PIL + numpy 连通域分析：G-R > 30 且 G-B > 20 的像素标记为绿色，BFS 求连通域，筛选面积 500-6000、质心 y < 70% 画布、bbox 接近正方形的块——即眼窝。
+- 备注：32/24px 缩略图肉眼验证高光可见；typecheck、build 通过。上一轮脚本 HSV 转 hue 公式 else 分支写错导致失败，本次改用 RGB 差值 + 连通域，稳健。
