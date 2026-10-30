@@ -16,7 +16,7 @@ interface HealthReport {
 export default function Home({
   go
 }: {
-  go: (p: 'junk' | 'startup' | 'privacy' | 'files' | 'uninstall' | 'move' | 'optimize' | 'schedule') => void
+  go: (p: 'junk' | 'startup' | 'privacy' | 'files' | 'uninstall' | 'move' | 'optimize' | 'system' | 'schedule') => void
 }): React.JSX.Element {
   const { t } = useI18n()
   const [info, setInfo] = useState<{ version: string; electron: string } | null>(null)
@@ -45,6 +45,7 @@ export default function Home({
     { key: 'uninstall', icon: '🗑️' },
     { key: 'move', icon: '🔀' },
     { key: 'optimize', icon: '🛠️' },
+    { key: 'system', icon: '💻' },
     { key: 'schedule', icon: '⏰' }
   ] as const
 

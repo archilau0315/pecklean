@@ -275,6 +275,8 @@ export const en: Record<string, string> = {
   'nav.optimize': 'Optimize',
   'home.card.optimize.title': 'System Optimize',
   'home.card.optimize.desc': 'Safe registry tweaks — privacy, performance, Explorer tweaks — each fully reversible',
+  'home.card.system.title': 'System',
+  'home.card.system.desc': 'Disk defrag, memory boost, VC++/DirectX/.NET runtime health check',
   'optimize.title': 'System Optimize',
   'optimize.subtitle': 'Safe registry-level tweaks; original values are auto-backed up, each item is one-click revertible',
   'optimize.scan': 'Scan status',

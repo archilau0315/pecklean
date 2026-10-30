@@ -278,6 +278,8 @@ export const zh: Record<string, string> = {
   'nav.optimize': '系统优化',
   'home.card.optimize.title': '系统优化',
   'home.card.optimize.desc': '注册表级可回滚优化：隐私防追踪、性能加速、资源管理器定制',
+  'home.card.system.title': '系统维护',
+  'home.card.system.desc': '磁盘碎片整理、内存加速、VC++/DirectX/.NET 运行库检测',
   'optimize.title': '系统优化',
   'optimize.subtitle': '注册表级安全修改，每项可一键还原（原值自动备份）',
   'optimize.scan': '扫描状态',

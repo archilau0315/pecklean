@@ -6,6 +6,7 @@ import os from 'os'
 import path from 'path'
 import { JUNK_RULES, JunkRule } from './junkRules'
 import { deletePath, resolveGlob, walkFiles, runElevated, runPowerShell, formatBytes } from './utils'
+import { matchesWhitelist, loadWhitelist } from './whitelist'
 import { ScanItem, CleanResult, ScanProgress } from '../../shared/types'
 
 /** 回收站特殊项：直接操作 $Recycle.Bin，避免 Clear-RecycleBin 在大回收站上卡死 */
@@ -114,6 +115,7 @@ async function scanRule(rule: JunkRule, job: Job): Promise<ScanItem> {
   let files = 0
   let bytes = 0
   const samples: string[] = []
+  const wlPatterns = loadWhitelist()
   for (const t of rule.targets) {
     if (job.cancelled) break
     const roots = resolveGlob(t)
@@ -122,13 +124,16 @@ async function scanRule(rule: JunkRule, job: Job): Promise<ScanItem> {
       if (samples.length < 3) samples.push(root)
       const st = await fs.stat(root).catch(() => null)
       if (st?.isFile()) {
-        files++
-        bytes += st.size
+        if (!matchesWhitelist(root, wlPatterns)) {
+          files++
+          bytes += st.size
+        }
         if (samples.length < 3) samples.push(root)
         continue
       }
-      await walkFiles(root, (_f, size) => {
+      await walkFiles(root, (f, size) => {
         if (job.cancelled) return false
+        if (matchesWhitelist(f, wlPatterns)) return
         files++
         bytes += size
       })

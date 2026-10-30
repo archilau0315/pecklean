@@ -310,3 +310,23 @@
 - 实测：这台机器 13/14 已安装，仅 VC++ 2005 x86 缺失（老版本极少软件需要）。.NET Framework 4.x Release 表 Win11 上需补更高版本映射。
 - typecheck 通过；build 通过；main bundle 86.32 → 92.14 kB（runtime.ts 增量 ~6kB）；renderer 323.48 → 330.03 kB（+6.5kB）。
 - 备注：零联网承诺——只检测不下载不安装，下载链接复制到剪贴板让用户自己决定。DirectX 在 Win10/11 始终标记 installed=true，只有 note 提示。
+
+## 42
+
+- 时间：2026-10-30 19:30
+- 模块：src/renderer/src/pages/Home.tsx（cards + go 类型 + system 卡片）、zh.ts/en.ts（+2 条 home.card.system）
+- 变更简述：首页补「系统维护」卡片（💻），位于 optimize 与 schedule 之间，icon 🛠️→💻→⏰ 顺序。go() 类型参数加 'system'。i18n 各 2 条：title=系统维护/System，desc=磁盘碎片整理+内存加速+运行库检测/英文对应。
+- typecheck/build 通过。
+
+## 43
+
+- 时间：2026-10-30 19:45
+- 模块：src/main/core/whitelist.ts（新增 ~90 行）、src/main/core/junk.ts（scanRule 接入白名单）
+- 变更简述：防误删白名单模块。
+  - whitelist.ts：loadWhitelist/saveWhitelist（存 userData/whitelist.json，JSON 格式 `{patterns: string[]}`）、matchesWhitelist（两种模式：路径前缀精确/子目录匹配 + glob 通配符匹配）、globMatch（极简 DFA 实现，支持 * 和 ?）、filterWhitelisted（批量过滤返回 kept+removed）。
+  - junk.ts：scanRule 函数顶部 loadWhitelist()，walkFiles 回调内 matchesWhitelist(f, wlPatterns)→return（undefined 继续遍历），单文件路径也加检查。这样所有 24 条垃圾规则扫描结果自动排除白名单文件，cleanJunk 清理时自然也不会删到。
+  - globMatch 和 matchesWhitelist 纯函数测过 14/14 全过（tsx _verify_whitelist.ts）。
+- 白名单格式示例：`["C:\\Users\\user\\Documents\\重要", "*.log", "temp_*.bak"]`
+- 未改动 privacy.ts（各浏览器专属路径整体 clean，非 walkFiles 枚举，白名单场景不典型）和 files.ts（用户主动查找要删的，无需默认白名单）。
+- typecheck/build 通过；main bundle 92.14 → 94.34 kB（whitelist.ts 增量 ~2kB）。
+- 备注：当前只在 junk.ts scan 阶段过滤。渲染进程暂无管理 UI（白名单增删），后续可在 Junk 页面加一个齿轮按钮。缓存策略：loadWhitelist 首次读入后缓存，saveWhitelist 时清缓存，避免高频 FS 调用。
