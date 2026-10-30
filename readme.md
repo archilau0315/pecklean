@@ -1,4 +1,4 @@
-<p align="center">
+﻿<p align="center">
   <img src="build/icon.png" width="132" alt="Pecklean logo" />
 </p>
 
@@ -153,7 +153,7 @@ flowchart LR
 
 | 镜像 | 地址 | 面向 |
 |---|---|---|
-| **Gitee · 国内镜像** | <https://gitee.com/archilau0315/pecklean> | 中国大陆访问 |
+| **Gitee · 国内镜像** | <https://gitee.com/archilau/pecklean> | 中国大陆访问 |
 | **GitHub · 国际主仓** | <https://github.com/archilau0315/pecklean> | 海外与开源社区 |
 
 两仓代码保持同步，Commit SHA 一致。
@@ -418,7 +418,7 @@ Code is mirrored to two hosts — pick whichever works better for you:
 
 | Mirror | URL | Audience |
 |---|---|---|
-| **Gitee · CN mirror** | <https://gitee.com/archilau0315/pecklean> | Mainland China |
+| **Gitee · CN mirror** | <https://gitee.com/archilau/pecklean> | Mainland China |
 | **GitHub · primary** | <https://github.com/archilau0315/pecklean> | Rest of the world |
 
 Both stay in sync with matching commit SHAs.

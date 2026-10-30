@@ -235,3 +235,10 @@
 - 模块：build/cover.png、readme.md、remote gitee
 - 变更简述：封面图 v2 把底部元数据条改为双镜像显示——左：GitHub · 国际主仓（github.com/archilau0315/pecklean），右：Gitee · 国内镜像（gitee.com/archilau0315/pecklean），中央 Free·Clean·No Ads·Portable·Fully Local 标语。中英双语 readme 的「快速开始」新增镜像对比表。git remote 添加 gitee 指向 https://gitee.com/archilau0315/pecklean.git（仓库需用户手动在 Gitee 网页端创建，因本地凭据是密码而非 access_token 且 SSH key 未绑定 Gitee）。
 - 备注：Gitee 凭据 username=archilau password_len=10，与 GitHub username archilau0315 不匹配；SSH git@gitee.com Permission denied (publickey)。用户在 Gitee 建好仓库后跑 git push gitee master 即可同步。
+
+## 33
+
+- 时间：2026-10-30 13:35
+- 模块：build/cover.png、readme.md、git remote gitee
+- 变更简述：修正 Gitee 用户名——仓库地址实际是 gitee.com/archilau/pecklean（archilau 而非 archilau0315）。封面图底部条 Gitee 链接更新为正确用户名；git remote set-url gitee https://gitee.com/archilau/pecklean.git；readme 中 Gitee 镜像链接同步修正。用户确认仓库已在 Gitee 同步推送，commit SHA 9c077d8 匹配。
+- 备注：Gitee Release 附件上传需要 access_token（用户在 gitee.com 设置 → 私人令牌生成），当前凭据是账号密码 100422Lyf# 不是 token；用户需手动去 Release 页面上传 exe 或提供 token 让我代传。
