@@ -8,6 +8,7 @@ import Uninstall from './pages/Uninstall'
 import Move from './pages/Move'
 import Schedule from './pages/Schedule'
 import { LanguageProvider, useI18n } from './i18n'
+import logo from './assets/logo.png'
 import type { Lang } from './i18n'
 
 const NAV = ['home', 'junk', 'startup', 'privacy', 'files', 'uninstall', 'move', 'schedule'] as const
@@ -39,7 +40,7 @@ function Shell(): React.JSX.Element {
     <div className="app">
       <aside className="sidebar">
         <div className="logo">
-          <span className="logo-icon">啄</span>
+          <img className="logo-icon" src={logo} alt="" />
           <span>{t('app.name')}</span>
         </div>
         <nav>

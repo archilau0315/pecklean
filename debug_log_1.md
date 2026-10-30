@@ -154,6 +154,13 @@
 - 变更简述：新增 electron-builder 打包能力，产物为免安装单文件 `dist\Pecklean-1.0.0-x64.exe`（约 77 MB，x64，portable 目标，asInvoker 普通权限启动）。打包配置写入 package.json 的 build 字段，新增 `npm run dist` 命令；新增 256×256 应用图标 build/icon.png；readme 增加交付版使用说明（自解压耗时、未签名时的 SmartScreen 提示、重新打包命令）。
 - 备注：打包过程使用本机 Electron 33.4.11 缓存，仅下载 NSIS/7zip/图标包；未配置代码签名，安装包与主程序均跳过签名。真实启动冒烟测试通过：便携 exe 约 6 秒完成自解压并拉起 5 个进程，窗口标题正常显示 Pecklean，随后已全部结束。dist/ 已在 .gitignore 中，打包产物不入库。
 
+## 23
+
+- 时间：2026-10-30 10:26
+- 模块：build/icon.png、src/renderer/src/assets/logo.png、App.tsx、styles.css、images.d.ts
+- 变更简述：更换为啄木鸟侧面白色剪影 logo，配色沿用原图标（深绿 → 青绿渐变）。生成素材后裁掉圆角外白边、清理右下角水印区域，导出 256×256 应用图标和 512×512 侧栏 logo；侧栏原「啄」字方块改为显示 logo 图片，样式去掉蓝紫渐变改为 30×30 圆角图；新增 png 模块类型声明以支持图片导入。
+- 备注：typecheck、build 通过，便携 exe 已重新打包（77.3 MB），启动冒烟测试窗口正常显示。build 目录只保留 icon.png，生成过程的 jpg 中间文件已删除。
+
 
 
 
