@@ -32,6 +32,12 @@
   <a href="#-faq">FAQ</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/archilau0315/pecklean/releases/latest">
+    <img src="https://img.shields.io/badge/Download-Portable%20Windows%20x64-3FB950?style=for-the-badge&logo=windows&logoColor=white" alt="Download" />
+  </a>
+</p>
+
 ---
 
 ## ✨ Features
@@ -141,13 +147,15 @@ flowchart LR
 
 ### Option 1 — Portable build (recommended)
 
-Run `npm run dist` to produce `dist/Pecklean-1.0.0-x64.exe`. Double-click to run — no Node.js, no runtime needed. The single file can be copied to any other 64-bit Windows machine.
+Download [Pecklean-1.0.0-x64.exe](https://github.com/archilau0315/pecklean/releases/latest) (77.1 MB), double-click to run — no Node.js, no runtime needed. The single file can be copied to any other 64-bit Windows machine.
 
 ```text
 first launch → self-extract to temp folder (~6–8s) → window appears
 ```
 
 > The binary is unsigned. If Windows shows "Windows protected your PC", click **More info → Run anyway**.
+>
+> Optional integrity check: SHA-256 `1436283871B90D5D3415CE5A588C480BE9B6A48212E73E9D777F741613283A53`
 
 ### Option 2 — From source
 

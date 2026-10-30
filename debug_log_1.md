@@ -207,3 +207,10 @@
 - 模块：readme.md、readme.en.md
 - 变更简述：readme 改为双语——readme.md 顶部加「简体中文 · English」切换，新增 readme.en.md 完整英文版（特性卡片、竞品对比、架构图、快速开始、用法表、安全设计、结构树、FAQ、路线图全部对译）。
 - 备注：两版互相链接；GitHub 默认展示中文版。
+
+## 29
+
+- 时间：2026-10-30 12:40
+- 模块：GitHub Release、readme.md、readme.en.md
+- 变更简述：exe 不走仓库提交（77MB 会永久膨胀 git 历史），改为上传 GitHub Release 资产 v1.0.0，直链 https://github.com/archilau0315/pecklean/releases/download/v1.0.0/Pecklean-1.0.0-x64.exe。两个 readme 顶部加醒目的「下载免安装版」按钮（for-the-badge 徽章指向 releases/latest），快速开始改为直接下载并附 SHA-256 校验值。
+- 备注：SHA-256 1436283871B90D5D3415CE5A588C480BE9B6A48212E73E9D777F741613283A53；资产大小 77.1MB；Release 说明含中英双语与 SmartScreen 提示。

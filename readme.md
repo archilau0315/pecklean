@@ -32,6 +32,12 @@
   <a href="#-常见问题">FAQ</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/archilau0315/pecklean/releases/latest">
+    <img src="https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD%E5%85%8D%E5%AE%89%E8%A3%85%E7%89%88-Windows%20x64-3FB950?style=for-the-badge&logo=windows&logoColor=white" alt="Download" />
+  </a>
+</p>
+
 ---
 
 ## ✨ 核心特性
@@ -141,13 +147,15 @@ flowchart LR
 
 ### 方式一：免安装版（推荐）
 
-执行 `npm run dist` 生成 `dist/Pecklean-1.0.0-x64.exe`，双击即用，无需安装 Node.js 或任何运行库。单个文件复制到其它 64 位 Windows 电脑上也能直接运行。
+直接下载：[Pecklean-1.0.0-x64.exe](https://github.com/archilau0315/pecklean/releases/latest)（77.1 MB），双击即用，无需安装 Node.js 或任何运行库。单个文件复制到其它 64 位 Windows 电脑上也能直接运行。
 
 ```text
 首次启动 → 自解压到临时目录（约 6~8 秒）→ 窗口出现
 ```
 
 > 程序未做数字签名。若弹出「Windows 已保护你的电脑」，点 **更多信息 → 仍要运行** 即可。
+>
+> 校验完整性（可选）：SHA-256 `1436283871B90D5D3415CE5A588C480BE9B6A48212E73E9D777F741613283A53`
 
 ### 方式二：源码运行
 
