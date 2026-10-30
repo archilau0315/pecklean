@@ -5,7 +5,7 @@ import { scanPrivacy, cleanPrivacy } from './core/privacy'
 import { listStartup, toggleStartup, listProcesses, killProcess } from './core/startup'
 import { findBigFiles, findDuplicates, deleteFiles, DEFAULT_BIG_ROOTS } from './core/files'
 import { listApps, uninstallApp, scanLeftovers, cleanLeftovers } from './core/uninstall'
-import { listPresets, listDrives, dirSize, defaultTarget, moveDirectory } from './core/move'
+import { listPresets, listDrives as listMoveDrives, dirSize, defaultTarget, moveDirectory } from './core/move'
 import { getScheduleStatus, saveSchedule, runAutoClean } from './core/schedule'
 import {
   scanOptimize,
@@ -16,6 +16,7 @@ import {
   runFullDiagnosis,
   OPTIMIZE_ITEMS
 } from './core/optimize'
+import { listDrives, analyzeDefrag, runDefrag, memoryInfo, memoryBoost } from './core/system'
 import { AppInfo, UninstallItem, LeftoverItem, ScheduleConfig, Lang } from '../shared/types'
 
 function push(channel: string, payload: unknown): void {
@@ -88,7 +89,7 @@ export function registerIpc(): void {
 
   // ── 目录搬移 ──
   ipcMain.handle('move:presets', () => listPresets())
-  ipcMain.handle('move:drives', () => listDrives())
+  ipcMain.handle('move:drives', () => listMoveDrives())
   ipcMain.handle('move:size', (_e, dir: string) => dirSize(dir))
   ipcMain.handle('move:defaultTarget', (_e, src: string, drive: string) => defaultTarget(src, drive))
   ipcMain.handle(
@@ -112,4 +113,15 @@ export function registerIpc(): void {
 
   // ── 全面体检 ──
   ipcMain.handle('diagnose:run', () => runFullDiagnosis())
+
+  // ── 磁盘碎片整理 + 内存加速 ──
+  ipcMain.handle('system:drives', () => listDrives())
+  ipcMain.handle('system:defragAnalyze', (_e, drive: string) => analyzeDefrag(drive))
+  ipcMain.handle('system:defragRun', async (_e, drive: string) => {
+    return runDefrag(drive, (msg) => push('system:defrag-progress', { drive, msg }))
+  })
+  ipcMain.handle('system:memoryInfo', () => memoryInfo())
+  ipcMain.handle('system:memoryBoost', async () => {
+    return memoryBoost({ onProgress: (msg) => push('system:memory-progress', msg) })
+  })
 }

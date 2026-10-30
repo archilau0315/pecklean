@@ -74,6 +74,27 @@ interface Api {
     optimizeTotal: number
     tips: string[]
   }>
+
+  // 磁盘碎片整理 + 内存加速
+  systemDrives(): Promise<{
+    letter: string; label: string; fs: string; totalMB: number; freeMB: number
+    type: string; fragmented: number | null; needsDefrag?: boolean
+  }[]>
+  systemDefragAnalyze(drive: string): Promise<number | null>
+  systemDefragRun(drive: string): Promise<{
+    ok: boolean; drive: string; beforePct: number | null; afterPct: number | null; error?: string
+  }>
+  onSystemDefragProgress(cb: (p: { drive: string; msg: string }) => void): () => void
+  systemMemoryInfo(): Promise<{
+    totalMB: number; availableMB: number; usedMB: number; usedPct: number
+    topProcesses: Array<{ name: string; pid: number; memMB: number }>
+  }>
+  systemMemoryBoost(): Promise<{
+    ok: boolean; freedMB: number; processedCount: number
+    after: { totalMB: number; availableMB: number; usedMB: number; usedPct: number; topProcesses: Array<{ name: string; pid: number; memMB: number }> } | null
+    error?: string
+  }>
+  onSystemMemoryProgress(cb: (msg: string) => void): () => void
 }
 
 declare global {

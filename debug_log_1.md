@@ -274,3 +274,11 @@
 - 变更简述：管理员 apply HKLM 不再只用 buildSetScript 直接 reg add——改成一段 PowerShell 先 reg query 所有 HKLM 原值写 JSON 临时文件（$env:TEMP/pecklean_backup_<uuid>.json），再 reg add 设置目标值。runElevated 返回后父进程读临时文件，把 JSON 里的原值合并进 backup 对应的 snapshots（HKLM 项 original 从 null 变成真实原值）。finally 里 unlinkSync 清理。undoOptimize 自动受益——还原 HKLM 时不再是 reg delete（回到默认值），而是 reg add 原值（精确回滚）。只弹一次 UAC。
 - 验证：typecheck 通过；build 通过；临时文件路径 os.tmpdir() + crypto.randomUUID() 避免冲突；JSON key 为 "key|value" 格式，ConvertTo-Json -Compress 紧凑输出；单引号转义 op.key.replace(/'/g, "''") 兼容 PowerShell。
 - 备注：buildBackupAndSetScript 生成的脚本每条 reg query 独立 try/catch，某键不存在 → $null → JSON 里该值就是 null → 还原时 reg delete（正确行为：原值不存在，应用后删除，还原后也不存在）。
+
+## 38
+
+- 时间：2026-10-30 17:00
+- 模块：src/main/core/system.ts（新增 ~250 行）、src/main/ipc.ts（+5 通道 + listDrives 别名解决 move.ts/system.ts 重名）、src/preload/index.ts、src/renderer/src/api.d.ts
+- 变更简述：新增第二梯队功能——磁盘碎片整理 + 内存加速。system.ts 提供 5 个导出函数：`listDrives`（Get-CimInstance Win32_LogicalDisk 列出固定盘+移动盘，过滤光驱网络盘）、`analyzeDefrag`（defrag X: /A /V 解析碎片率百分比，正则匹配 "Total fragmented space = XX%" 和回退模式）、`runDefrag`（defrag X: /O 自动识别 SSD→TRIM / HDD→碎片整理，10 分钟超时，带进度回调）、`memoryInfo`（Win32_OperatingSystem 获取总量/可用 + Top 10 大进程工作集）、`memoryBoost`（Add-Type psapi.dll EmptyWorkingSet 对阈值以上进程刷工作集到分页文件，排除 System/Registry/dwm 等关键进程）。IPC 通道：system:drives / system:defragAnalyze / system:defragRun + system:defrag-progress 推送 / system:memoryInfo / system:memoryBoost + system:memory-progress 推送。preload 和 api.d.ts 同步更新。
+- 验证：_verify_system.ts 跑通——C/D/E 三盘正确枚举（1906/1024/883GB，使用率 35%/17%/11%），C 盘碎片率 1%，内存 32GB Top 5 进程也正确（Trae CN 940MB、Memory Compression 891MB、MsMpEng 589MB、Weixin 578MB、explorer 518MB）。typecheck 通过；build 通过；main bundle 从 79.94kB → 85.56kB。
+- 备注：defrag 命令普通权限就能跑，不需要 UAC——Windows 自带 defrag.exe 自身会以所需权限执行。内存加速 EmptyWorkingSet 不杀进程只是刷工作集到分页文件，几秒后系统会自动按需调回，属于安全操作。threshold 默认 50MB，可配置。

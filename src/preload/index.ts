@@ -68,7 +68,23 @@ const api = {
   optimizeUndoAll: () => ipcRenderer.invoke('optimize:undoAll'),
   optimizeRestartExplorer: () => ipcRenderer.invoke('optimize:restartExplorer'),
 
-  diagnoseRun: () => ipcRenderer.invoke('diagnose:run')
+  diagnoseRun: () => ipcRenderer.invoke('diagnose:run'),
+
+  systemDrives: () => ipcRenderer.invoke('system:drives'),
+  systemDefragAnalyze: (drive: string) => ipcRenderer.invoke('system:defragAnalyze', drive),
+  systemDefragRun: (drive: string) => ipcRenderer.invoke('system:defragRun', drive),
+  onSystemDefragProgress: (cb: (p: { drive: string; msg: string }) => void) => {
+    const fn = (_e: unknown, p: unknown): void => cb(p as { drive: string; msg: string })
+    ipcRenderer.on('system:defrag-progress', fn)
+    return () => ipcRenderer.removeListener('system:defrag-progress', fn)
+  },
+  systemMemoryInfo: () => ipcRenderer.invoke('system:memoryInfo'),
+  systemMemoryBoost: () => ipcRenderer.invoke('system:memoryBoost'),
+  onSystemMemoryProgress: (cb: (msg: string) => void) => {
+    const fn = (_e: unknown, p: unknown): void => cb(String(p))
+    ipcRenderer.on('system:memory-progress', fn)
+    return () => ipcRenderer.removeListener('system:memory-progress', fn)
+  }
 }
 
 contextBridge.exposeInMainWorld('api', api)
