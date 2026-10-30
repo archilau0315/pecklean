@@ -13,6 +13,7 @@ export const en: Record<string, string> = {
   'nav.uninstall': 'Uninstall',
   'nav.move': 'Move Folders',
   'nav.schedule': 'Scheduled Cleanup',
+  'nav.system': 'System',
   'nav.footer': 'Kuanform Boundless · Archilau Studio · v1.0',
 
   // ── Home ──
@@ -329,5 +330,39 @@ export const en: Record<string, string> = {
   'diagnose.score.good': 'Healthy',
   'diagnose.score.mid': 'Recommended to clean',
   'diagnose.score.low': 'Needs attention',
-  'diagnose.tipTitle': 'Suggestions'
+  'diagnose.tipTitle': 'Suggestions',
+
+  // ── System ──
+  'system.title': 'System',
+  'system.subtitle': 'Disk defrag + memory boost — safe operations',
+  'system.tab.defrag': 'Disk Defrag',
+  'system.tab.memory': 'Memory Boost',
+  'system.refresh': 'Refresh',
+  'system.drives': 'Drives',
+  'system.noDrive': 'No local drives detected',
+  'system.analyze': 'Analyze',
+  'system.analyzing': 'Analyzing…',
+  'system.defrag': 'Optimize',
+  'system.defraging': 'Optimizing…',
+  'system.fragPct': '{pct}% fragmented',
+  'system.defragAnalyzeFail': 'Analysis failed (network drive or permission issue)',
+  'system.defragDone': 'Done: fragmentation {before}% → {after}%',
+  'system.defragFail': 'Failed: {msg}',
+  'system.defragTip.title': 'Notes',
+  'system.defragTip.1': 'Click Analyze to check the current fragmentation; defrag is only needed at ≥ 10%',
+  'system.defragTip.2': 'Windows auto-detects SSD (TRIM) vs HDD (defragment)',
+  'system.defragTip.3': 'Optimization may take minutes depending on drive size and fragmentation level',
+  'system.memoryTitle': 'Memory usage',
+  'system.memUsed': 'Used',
+  'system.memFree': 'Available',
+  'system.boost': 'Boost memory',
+  'system.boosting': 'Boosting…',
+  'system.boostDone': 'Processed {n} processes, freed ~{mb} MB working set',
+  'system.boostFail': 'Failed: {msg}',
+  'system.memTop': 'Top 10 memory consumers',
+  'system.noProcess': 'No processes found',
+  'system.memTip.title': 'Notes',
+  'system.memTip.1': 'Boost calls EmptyWorkingSet — flushes background process working sets to the pagefile',
+  'system.memTip.2': 'No processes are killed; common data is paged back on demand within seconds',
+  'system.memTip.3': 'Effect is brief but safe — use when memory is tight'
 }

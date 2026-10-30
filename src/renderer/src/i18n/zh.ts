@@ -13,6 +13,7 @@ export const zh: Record<string, string> = {
   'nav.uninstall': '软件卸载',
   'nav.move': '目录搬移',
   'nav.schedule': '定时清理',
+  'nav.system': '系统维护',
   'nav.footer': '匡形无界-啄之堂 · v1.0',
 
   // ── 首页 ──
@@ -332,5 +333,39 @@ export const zh: Record<string, string> = {
   'diagnose.score.good': '健康良好',
   'diagnose.score.mid': '建议清理',
   'diagnose.score.low': '需要优化',
-  'diagnose.tipTitle': '建议'
+  'diagnose.tipTitle': '建议',
+
+  // ── 系统维护 ──
+  'system.title': '系统维护',
+  'system.subtitle': '磁盘碎片整理 + 内存加速，安全操作',
+  'system.tab.defrag': '磁盘碎片',
+  'system.tab.memory': '内存加速',
+  'system.refresh': '刷新',
+  'system.drives': '磁盘列表',
+  'system.noDrive': '未检测到本地磁盘',
+  'system.analyze': '分析',
+  'system.analyzing': '分析中…',
+  'system.defrag': '优化',
+  'system.defraging': '优化中…',
+  'system.fragPct': '碎片率 {pct}%',
+  'system.defragAnalyzeFail': '分析失败（可能是网络盘或权限问题）',
+  'system.defragDone': '完成：碎片率 {before}% → {after}%',
+  'system.defragFail': '优化失败：{msg}',
+  'system.defragTip.title': '说明',
+  'system.defragTip.1': '点击「分析」查看当前碎片率，≥ 10% 才需要整理',
+  'system.defragTip.2': 'Windows 会自动识别 SSD 并执行 TRIM，HDD 执行碎片整理',
+  'system.defragTip.3': '整理过程耗时取决于磁盘大小和碎片程度，可能需要几分钟',
+  'system.memoryTitle': '内存使用',
+  'system.memUsed': '已用',
+  'system.memFree': '可用',
+  'system.boost': '一键加速',
+  'system.boosting': '加速中…',
+  'system.boostDone': '已处理 {n} 个进程，释放约 {mb} MB 工作集',
+  'system.boostFail': '加速失败：{msg}',
+  'system.memTop': '内存占用 Top 10',
+  'system.noProcess': '未发现进程',
+  'system.memTip.title': '说明',
+  'system.memTip.1': '内存加速调用 EmptyWorkingSet，把后台进程工作集刷到分页文件',
+  'system.memTip.2': '不会杀掉任何进程，几秒后系统会按需把常用数据调回物理内存',
+  'system.memTip.3': '效果短暂但安全，建议在内存吃紧时使用'
 }

@@ -8,11 +8,12 @@ import Uninstall from './pages/Uninstall'
 import Move from './pages/Move'
 import Schedule from './pages/Schedule'
 import Optimize from './pages/Optimize'
+import System from './pages/System'
 import { LanguageProvider, useI18n } from './i18n'
 import logo from './assets/logo.png'
 import type { Lang } from './i18n'
 
-const NAV = ['home', 'junk', 'startup', 'privacy', 'files', 'uninstall', 'move', 'optimize', 'schedule'] as const
+const NAV = ['home', 'junk', 'startup', 'privacy', 'files', 'uninstall', 'move', 'optimize', 'system', 'schedule'] as const
 
 type PageKey = (typeof NAV)[number]
 
@@ -77,6 +78,7 @@ function Shell(): React.JSX.Element {
         {show('uninstall', <Uninstall />)}
         {show('move', <Move />)}
         {show('optimize', <Optimize />)}
+        {show('system', <System />)}
         {show('schedule', <Schedule />)}
       </main>
     </div>

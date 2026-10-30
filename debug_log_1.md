@@ -282,3 +282,11 @@
 - 变更简述：新增第二梯队功能——磁盘碎片整理 + 内存加速。system.ts 提供 5 个导出函数：`listDrives`（Get-CimInstance Win32_LogicalDisk 列出固定盘+移动盘，过滤光驱网络盘）、`analyzeDefrag`（defrag X: /A /V 解析碎片率百分比，正则匹配 "Total fragmented space = XX%" 和回退模式）、`runDefrag`（defrag X: /O 自动识别 SSD→TRIM / HDD→碎片整理，10 分钟超时，带进度回调）、`memoryInfo`（Win32_OperatingSystem 获取总量/可用 + Top 10 大进程工作集）、`memoryBoost`（Add-Type psapi.dll EmptyWorkingSet 对阈值以上进程刷工作集到分页文件，排除 System/Registry/dwm 等关键进程）。IPC 通道：system:drives / system:defragAnalyze / system:defragRun + system:defrag-progress 推送 / system:memoryInfo / system:memoryBoost + system:memory-progress 推送。preload 和 api.d.ts 同步更新。
 - 验证：_verify_system.ts 跑通——C/D/E 三盘正确枚举（1906/1024/883GB，使用率 35%/17%/11%），C 盘碎片率 1%，内存 32GB Top 5 进程也正确（Trae CN 940MB、Memory Compression 891MB、MsMpEng 589MB、Weixin 578MB、explorer 518MB）。typecheck 通过；build 通过；main bundle 从 79.94kB → 85.56kB。
 - 备注：defrag 命令普通权限就能跑，不需要 UAC——Windows 自带 defrag.exe 自身会以所需权限执行。内存加速 EmptyWorkingSet 不杀进程只是刷工作集到分页文件，几秒后系统会自动按需调回，属于安全操作。threshold 默认 50MB，可配置。
+
+## 39
+
+- 时间：2026-10-30 17:30
+- 模块：src/renderer/src/pages/System.tsx（新增 ~250 行）、src/renderer/src/App.tsx（NAV + system + 导入）、zh.ts/en.ts（+20 条 system 词条）
+- 变更简述：System 页面接入——两个 Tab（磁盘碎片 / 内存加速）。磁盘碎片 Tab 列出所有本地盘（盘符/卷标/文件系统/已用进度条），每行「分析」按钮跑 defrag X: /A /V 解析碎片率正则匹配，碎片率 ≥10% 给 warn 徽章；「优化」按钮跑 defrag X: /O（SSD TRIM / HDD 整理），带进度推送订阅 system:defrag-progress 实时显示。内存加速 Tab 显示大数字内存使用率 + 进度条 + Top 10 进程列表 + 一键加速按钮（调 system:memoryBoost，带 system:memory-progress 订阅）。侧边栏 NAV 数组在 optimize 与 schedule 之间插入 system。中英双语各 20 条新词条。
+- 验证：typecheck 通过；build 通过；renderer bundle 308.73 → 323.48 kB（System 页面增量 ~15kB）。
+- 备注：System 页面首次 mounted 自动加载 drives + memory；defraging / boosting 时禁用其他按钮防止并发。i18n 模板变量 {mb}/{n}/{before}/{after}/{pct}/{msg}。
