@@ -18,6 +18,7 @@ import {
 } from './core/optimize'
 import { listDrives, analyzeDefrag, runDefrag, memoryInfo, memoryBoost } from './core/system'
 import { scanRuntimes, summarize } from './core/runtime'
+import { loadWhitelist, saveWhitelist } from './core/whitelist'
 import { AppInfo, UninstallItem, LeftoverItem, ScheduleConfig, Lang } from '../shared/types'
 
 function push(channel: string, payload: unknown): void {
@@ -130,5 +131,12 @@ export function registerIpc(): void {
   ipcMain.handle('runtime:scan', async () => {
     const items = await scanRuntimes()
     return { items, summary: summarize(items) }
+  })
+
+  // ── 防误删白名单 ──
+  ipcMain.handle('whitelist:get', () => loadWhitelist())
+  ipcMain.handle('whitelist:set', (_e, patterns: string[]) => {
+    saveWhitelist(patterns)
+    return loadWhitelist()
   })
 }

@@ -330,3 +330,27 @@
 - 未改动 privacy.ts（各浏览器专属路径整体 clean，非 walkFiles 枚举，白名单场景不典型）和 files.ts（用户主动查找要删的，无需默认白名单）。
 - typecheck/build 通过；main bundle 92.14 → 94.34 kB（whitelist.ts 增量 ~2kB）。
 - 备注：当前只在 junk.ts scan 阶段过滤。渲染进程暂无管理 UI（白名单增删），后续可在 Junk 页面加一个齿轮按钮。缓存策略：loadWhitelist 首次读入后缓存，saveWhitelist 时清缓存，避免高频 FS 调用。
+
+## 44
+
+- 时间：2026-10-30 20:00
+- 模块：ipc.ts（whitelist:get/set）、preload/index.ts（+2 API）、api.d.ts（+2 类型）、System.tsx（+Whitelist Tab textarea）、zh.ts/en.ts（+8 词条）
+- 变更简述：白名单管理 UI 接通。
+  - IPC 层：whitelist:get 返回 loadWhitelist() 缓存结果，whitelist:set 保存后返回最新数组（清缓存）
+  - System 页面新增第 4 个 Tab「安全白名单」，textarea 每行一条 pattern，底部说明格式。保存按钮 → parse 空行/trim → whitelistSet → "已保存 ✓" toast 2 秒
+  - 挂载时自动从 IPC 读取已有 patterns 填入 textarea
+- 白名单格式不变：路径前缀 + glob 通配符 * 和 ?
+- typecheck/build 通过；renderer 330.30 → 333.94 kB（+3.6 kB）。
+
+## 45
+
+- 时间：2026-10-30 20:10
+- 模块：optimize.ts（OptimizeItem + defaultIsOptimized 字段 + scanOptimize 反转逻辑 + perf.animation 加此标记）
+- 变更简述：perf.animation 永远判未应用修复。
+  - 问题：MinAnimate 默认值就是 0（禁用动画=我们的优化目标），原来 scan 里 `current === target` → applied=true → 显示已应用，永远打勾
+  - 修复：OptimizeItem interface 加 `defaultIsOptimized?: boolean` 可选字段；scanOptimize 里若此字段 true，对每条 reg 的 applied 结果取反（`!compareValue`）。整体 item.applied 仍是 detail.every 的 AND
+  - OPTIMIZE_ITEMS 数组中 perf.animation 加 `defaultIsOptimized: true`
+  - 这样系统默认 MinAnimate=0 时 → 扫描显示"未应用" → 用户点 apply 后仍是 0 → 下次扫描显示已应用 → undo 改成 1 → 恢复系统默认 → 扫描又显示未应用。逻辑闭环。
+- 后续可扩展：其他项若发现"系统默认就是优化状态"，只需加这个字段。
+- privacy.ts 未接白名单（注册表 + 浏览器专属目录，不是用户重要文件场景）。
+- typecheck/build 通过。

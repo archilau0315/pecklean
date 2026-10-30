@@ -103,6 +103,9 @@ interface Api {
     }>
     summary: { ok: number; total: number; missing: unknown[] }
   }>
+
+  whitelistGet(): Promise<string[]>
+  whitelistSet(patterns: string[]): Promise<string[]>
 }
 
 declare global {

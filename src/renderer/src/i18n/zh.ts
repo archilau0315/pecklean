@@ -387,5 +387,17 @@ export const zh: Record<string, string> = {
   'system.rtTip.title': '说明',
   'system.rtTip.1': '只检测、不下载、不安装——零联网承诺',
   'system.rtTip.2': '点击「复制下载链接」后，打开浏览器粘贴访问微软官方下载页',
-  'system.rtTip.3': 'Windows 10/11 自带 DirectX 12，若游戏提示缺组件可补装 DirectX End-User Runtime'
+  'system.rtTip.3': 'Windows 10/11 自带 DirectX 12，若游戏提示缺组件可补装 DirectX End-User Runtime',
+
+  // ── 防误删白名单 ──
+  'system.tab.whitelist': '安全白名单',
+  'system.wlTitle': '防误删白名单',
+  'system.wlPlaceholder': 'C:\\Users\\你\\Documents\\重要\n*.log\ntemp_*.bak',
+  'system.wlHint': '每行一条，支持路径前缀和通配符 * ?',
+  'system.wlSave': '保存白名单',
+  'system.wlSaved': '已保存 ✓',
+  'system.wlTip.title': '说明',
+  'system.wlTip.1': '白名单内的文件在垃圾清理扫描和清理时自动跳过',
+  'system.wlTip.2': '路径前缀匹配："C:\\Users\\你\\Documents\\重要" 排除该目录下所有文件',
+  'system.wlTip.3': '通配符匹配（仅文件名）："*.log" 排除所有 .log 文件'
 }

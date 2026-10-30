@@ -86,7 +86,10 @@ const api = {
     return () => ipcRenderer.removeListener('system:memory-progress', fn)
   },
 
-  runtimeScan: () => ipcRenderer.invoke('runtime:scan')
+  runtimeScan: () => ipcRenderer.invoke('runtime:scan'),
+
+  whitelistGet: () => ipcRenderer.invoke('whitelist:get'),
+  whitelistSet: (patterns: string[]) => ipcRenderer.invoke('whitelist:set', patterns)
 }
 
 contextBridge.exposeInMainWorld('api', api)

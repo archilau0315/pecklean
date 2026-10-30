@@ -38,6 +38,8 @@ export interface OptimizeItem {
   admin?: boolean
   /** 执行完成后是否需要重启 Explorer */
   needRestartExplorer?: boolean
+  /** 若为 true，表示"默认值就是优化值"，扫描时比较结果取反 */
+  defaultIsOptimized?: boolean
   regs: RegOp[]
 }
 
@@ -94,6 +96,8 @@ const ITEM_INDEX: OptimizeItem[] = (() => {
     {
       id: 'perf.animation',
       group: 'perf',
+      // MinAnimate 默认值 = 0（已禁用动画），系统本身就是优化状态 → 扫描取反
+      defaultIsOptimized: true,
       regs: [
         { key: 'HKCU\\Control Panel\\Desktop\\WindowMetrics', value: 'MinAnimate', type: 'REG_SZ', target: '0' },
         { key: 'HKCU\\Control Panel\\Desktop', value: 'MenuShowDelay', type: 'REG_SZ', target: '0' },
@@ -334,7 +338,9 @@ export async function scanOptimize(): Promise<OptimizeScanItem[]> {
   return OPTIMIZE_ITEMS.map((item) => {
     const detail = item.regs.map((r) => {
       const cur = results.get(`${r.key}|${r.value}`) ?? null
-      const applied = cur !== null && compareValue(cur, r.target, r.type)
+      let applied = cur !== null && compareValue(cur, r.target, r.type)
+      // 默认值就是优化值 → 扫描结果取反（"当前=默认=优化值" → 显示未应用）
+      if (item.defaultIsOptimized) applied = cur !== null && !compareValue(cur, r.target, r.type)
       return { key: r.key, value: r.value, applied }
     })
     return {

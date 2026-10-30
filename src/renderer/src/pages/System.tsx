@@ -51,7 +51,7 @@ function fmtSize(mb: number): string {
 
 export default function System(): React.JSX.Element {
   const { t } = useI18n()
-  const [tab, setTab] = useState<'defrag' | 'memory' | 'runtime'>('defrag')
+  const [tab, setTab] = useState<'defrag' | 'memory' | 'runtime' | 'whitelist'>('defrag')
 
   // ── Defrag state ──
   const [drives, setDrives] = useState<DriveRow[]>([])
@@ -71,10 +71,15 @@ export default function System(): React.JSX.Element {
   const [rtScanning, setRtScanning] = useState(false)
   const [rtCopied, setRtCopied] = useState<string>('')
 
+  // ── Whitelist state ──
+  const [wlText, setWlText] = useState('')
+  const [wlSaved, setWlSaved] = useState(false)
+
   // ── Load on mount ──
   useEffect(() => {
     loadDrives()
     loadMem()
+    window.api.whitelistGet().then((p) => setWlText((p as string[]).join('\n')))
   }, [])
 
   const loadDrives = async (): Promise<void> => {
@@ -200,6 +205,16 @@ export default function System(): React.JSX.Element {
     }
   }
 
+  const saveWhitelist = async (): Promise<void> => {
+    const patterns = wlText
+      .split(/\r?\n/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+    await window.api.whitelistSet(patterns)
+    setWlSaved(true)
+    setTimeout(() => setWlSaved(false), 2000)
+  }
+
   // 内存使用率条颜色
   const memColor = useMemo(() => {
     if (!mem) return ''
@@ -234,9 +249,19 @@ export default function System(): React.JSX.Element {
           >
             {t('system.tab.runtime')}
           </button>
+          <button
+            className={`btn ${tab === 'whitelist' ? 'primary' : ''}`}
+            onClick={() => setTab('whitelist')}
+          >
+            {t('system.tab.whitelist')}
+          </button>
           {tab === 'runtime' ? (
             <button className="btn" onClick={scanRuntimes} disabled={rtScanning}>
               {rtScanning ? t('system.rtScanning') : t('system.rtRescan')}
+            </button>
+          ) : tab === 'whitelist' ? (
+            <button className="btn primary" onClick={saveWhitelist}>
+              {wlSaved ? t('system.wlSaved') : t('system.wlSave')}
             </button>
           ) : (
             <button className="btn" onClick={loadDrives} disabled={defraging !== null}>
@@ -431,6 +456,36 @@ export default function System(): React.JSX.Element {
               <div>{t('system.rtTip.1')}</div>
               <div>{t('system.rtTip.2')}</div>
               <div>{t('system.rtTip.3')}</div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ═══════════════════════ Whitelist Tab ═══════════════════════ */}
+      {tab === 'whitelist' && (
+        <>
+          <div className="category">
+            <div className="category-title">{t('system.wlTitle')}</div>
+            <div style={{ padding: '12px 16px' }}>
+              <textarea
+                value={wlText}
+                onChange={(e) => setWlText(e.target.value)}
+                rows={10}
+                placeholder={t('system.wlPlaceholder')}
+                style={{ width: '100%', fontFamily: 'monospace', fontSize: 13 }}
+              />
+              <div style={{ color: '#9aa3b2', fontSize: 12, marginTop: 8 }}>
+                {t('system.wlHint')}
+              </div>
+            </div>
+          </div>
+
+          <div className="category">
+            <div className="category-title">{t('system.wlTip.title')}</div>
+            <div style={{ padding: '0 12px', lineHeight: 1.8, color: '#9aa3b2', fontSize: 13 }}>
+              <div>{t('system.wlTip.1')}</div>
+              <div>{t('system.wlTip.2')}</div>
+              <div>{t('system.wlTip.3')}</div>
             </div>
           </div>
         </>

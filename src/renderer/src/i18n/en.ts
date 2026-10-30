@@ -384,5 +384,17 @@ export const en: Record<string, string> = {
   'system.rtTip.title': 'Notes',
   'system.rtTip.1': 'Scan only — no downloads, no installs, zero-network promise',
   'system.rtTip.2': 'Click "Copy download link" then paste in your browser for the official Microsoft page',
-  'system.rtTip.3': 'Win10/11 ships DirectX 12; install DirectX End-User Runtime if games report missing DLLs'
+  'system.rtTip.3': 'Win10/11 ships DirectX 12; install DirectX End-User Runtime if games report missing DLLs',
+
+  // ── Whitelist ──
+  'system.tab.whitelist': 'Safe Whitelist',
+  'system.wlTitle': 'Anti-accidental-delete Whitelist',
+  'system.wlPlaceholder': 'C:\\Users\\You\\Documents\\Important\n*.log\ntemp_*.bak',
+  'system.wlHint': 'One pattern per line — path prefixes and wildcards * ?',
+  'system.wlSave': 'Save',
+  'system.wlSaved': 'Saved ✓',
+  'system.wlTip.title': 'Notes',
+  'system.wlTip.1': 'Whitelisted files are automatically excluded from junk scan and cleanup',
+  'system.wlTip.2': 'Path prefix match: "C:\\Users\\You\\Documents\\Important" excludes everything under that directory',
+  'system.wlTip.3': 'Wildcard match (filename only): "*.log" excludes all .log files'
 }
