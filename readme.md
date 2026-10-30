@@ -2,6 +2,10 @@
   <img src="build/icon.png" width="132" alt="Pecklean logo" />
 </p>
 
+<p align="center">
+  <b>简体中文</b> · <a href="readme.en.md">English</a>
+</p>
+
 <h1 align="center">啄 · 净 &nbsp;Pecklean</h1>
 
 <p align="center">

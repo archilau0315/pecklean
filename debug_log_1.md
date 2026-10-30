@@ -200,3 +200,10 @@
 - 模块：readme.md、仓库配置
 - 变更简述：readme 全面重做视觉版——居中 logo 头图、徽章行、目录锚点、三大特性卡片表格、与常见清理软件的对比表、Mermaid 架构图、快速开始、模块操作要点表、安全设计、项目结构树、模块职责表、可折叠 FAQ、路线图。同时创建 GitHub 仓库 archilau0315/pecklean 并推送全部提交。
 - 备注：仓库 public，首个推送分支 master 成为默认分支；dist/ 与 out/ 已被 .gitignore 排除，未上传打包产物。
+
+## 28
+
+- 时间：2026-10-30 12:20
+- 模块：readme.md、readme.en.md
+- 变更简述：readme 改为双语——readme.md 顶部加「简体中文 · English」切换，新增 readme.en.md 完整英文版（特性卡片、竞品对比、架构图、快速开始、用法表、安全设计、结构树、FAQ、路线图全部对译）。
+- 备注：两版互相链接；GitHub 默认展示中文版。
