@@ -156,10 +156,10 @@
 
 ## 23
 
-- 时间：2026-10-30 10:26
-- 模块：build/icon.png、src/renderer/src/assets/logo.png、App.tsx、styles.css、images.d.ts
-- 变更简述：更换为啄木鸟侧面白色剪影 logo，配色沿用原图标（深绿 → 青绿渐变）。生成素材后裁掉圆角外白边、清理右下角水印区域，导出 256×256 应用图标和 512×512 侧栏 logo；侧栏原「啄」字方块改为显示 logo 图片，样式去掉蓝紫渐变改为 30×30 圆角图；新增 png 模块类型声明以支持图片导入。
-- 备注：typecheck、build 通过，便携 exe 已重新打包（77.3 MB），启动冒烟测试窗口正常显示。build 目录只保留 icon.png，生成过程的 jpg 中间文件已删除。
+- 时间：2026-10-30 10:41
+- 模块：renderer/src/App.tsx、renderer/src/styles.css
+- 变更简述：侧边栏品牌图标由「啄」文字改为内联 SVG 啄木鸟侧面头像剪影（细长喙、头顶羽冠、圆形眼睛镂空），白色剪影尽量撑满图标；底色改为与应用图标一致的墨绿→青绿渐变（#00895F → #03BE9F），图标尺寸 30→32px。SVG 使用 mask 做眼睛镂空，无需额外图片资源。
+- 备注：用 Electron 离屏截图渲染 128/64/32px 三档核对造型与识别度，32px 下仍可辨认；typecheck、build 通过，并已重新打包 dist\Pecklean-1.0.0-x64.exe（77 MB，10:41 更新）。
 
 
 
