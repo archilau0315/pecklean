@@ -6,12 +6,14 @@ interface ScanRow {
   id: string
   group: string
   applied: boolean
+  admin?: boolean
   needRestartExplorer?: boolean
 }
 
 interface OptItem {
   id: string
   group: string
+  admin?: boolean
   needRestartExplorer?: boolean
 }
 
@@ -174,6 +176,7 @@ export default function Optimize(): React.JSX.Element {
               />
               <div className="item-name">{rowTitle(row.id)}</div>
               <div className="item-samples grow">{rowDesc(row.id)}</div>
+              {row.admin && <span className="badge admin" title="需要管理员权限，应用时会弹 UAC">UAC</span>}
               {row.needRestartExplorer && (
                 <span className="badge admin">{t('optimize.needRestartExplorer')}</span>
               )}

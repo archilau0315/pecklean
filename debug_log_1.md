@@ -258,3 +258,11 @@
 - 备注：optimize.ts 的 reg query 路径全部走 HKLM/HKCU 安全区，不碰 Windows CurrentVersion 核心键。Windows 遥测关闭依赖 HKLM→需要管理员，其他多数 HKCU 项普通权限可改。exe 中 Electron main 进程已默认 requestExecutionLevel=user，普通项可直接生效，HKLM 项需提权（啄净已有 runElevated 机制可接入）。
 - 来源：逆向 NetPowerDLLRepair 商业软件后的功能对比，优先落地第一梯队（注册表级可回滚优化 + 一键诊断）。
 - 验证：typecheck 通过；dist 打包 77MB；Home 体检按钮触发后聚合四项扫描。
+
+## 36
+
+- 时间：2026-10-30 15:00
+- 模块：src/main/core/optimize.ts（重写 apply/undo UAC 接入）、src/renderer/src/pages/Optimize.tsx（admin 徽章）
+- 变更简述：applyOptimize / undoOptimize 全部 async 化，HKCU 路径普通权限直接 reg add/del，HKLM 路径合并成一段 PowerShell 走 runElevated（只弹一次 UAC，减少打断）。item 定义里增加 admin 字段自动标记是否含 HKLM，scanOptimize 返回的 OptimizeScanItem 也带 admin。前端 Optimize 页面每行显示 UAC 徽章。scan 阶段不尝试管理员查询——runElevated 的 Start-Process -Verb RunAs 拉起的管理员进程 stdout 父进程拿不到，空跑只会白弹 UAC。
+- 验证：_verify_optimize.ts 跑通，14 项扫描正确：ADMIN 6 项（privacy.telemetry/diagnostics/clipboardHistory/activityHistory + perf.backgroundApps + usb.writeCache），NORMAL 8 项，已应用 2/14（perf.visualEffects + explorer.hideExtensions）。
+- 备注：scanOptimize 普通权限读 HKLM 读不到（返回 null）→ HKLM 项判未应用是合理的（遥测/诊断默认就是开启的状态）。applyOptimize 先备份 HKCU 原值，HKLM 原值由于普通权限读不到 → backup 里 original=null → 还原阶段对 HKLM 执行 reg delete（回到默认值）。这是安全的权衡：管理员项的 backup 不是完整原值快照，而是"默认关 = 应用前，默认开 = 还原后"。
