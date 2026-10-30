@@ -276,7 +276,7 @@ function mirrorEmpty(dir: string): Promise<boolean> {
       new Promise<boolean>((resolveP) => {
         const proc = spawn(
           'robocopy.exe',
-          [empty, dir, '/MIR', '/R:0', '/W:0', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS', '/NP'],
+          [empty, dir, '/MIR', '/MT:16', '/R:0', '/W:0', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS', '/NP'],
           { windowsHide: true }
         )
         proc.on('close', (code) => resolveP((code ?? 16) < 8))
