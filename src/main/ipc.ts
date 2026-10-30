@@ -1,6 +1,6 @@
 /** IPC 注册：渲染进程唯一入口 */
 import { ipcMain, app, BrowserWindow, dialog } from 'electron'
-import { scanJunk, cleanJunk, JUNK_IDS } from './core/junk'
+import { scanJunk, cleanJunk, cancelJunk, JUNK_IDS } from './core/junk'
 import { scanPrivacy, cleanPrivacy } from './core/privacy'
 import { listStartup, toggleStartup, listProcesses, killProcess } from './core/startup'
 import { findBigFiles, findDuplicates, deleteFiles, DEFAULT_BIG_ROOTS } from './core/files'
@@ -45,6 +45,7 @@ export function registerIpc(): void {
     cleanJunk(ids, (p) => push('junk:clean-progress', p))
   )
   ipcMain.handle('junk:ids', () => JUNK_IDS)
+  ipcMain.handle('junk:cancel', () => cancelJunk())
 
   // ── 隐私清理 ──
   ipcMain.handle('privacy:scan', () => scanPrivacy())

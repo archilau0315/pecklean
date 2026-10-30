@@ -1,7 +1,7 @@
 /** 垃圾清理引擎：按规则扫描统计，按选择清理（普通项 Node 删，管理员项提权删） */
 import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
-import { spawn } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
 import os from 'os'
 import path from 'path'
 import { JUNK_RULES, JunkRule } from './junkRules'
@@ -10,6 +10,45 @@ import { ScanItem, CleanResult, ScanProgress } from '../../shared/types'
 
 /** 回收站特殊项：直接操作 $Recycle.Bin，避免 Clear-RecycleBin 在大回收站上卡死 */
 const RECYCLE_ID = 'recyclebin'
+
+/** 一次扫描/清理任务的可取消状态 */
+interface Job {
+  cancelled: boolean
+  procs: Set<ChildProcess>
+}
+
+let activeJob: Job | null = null
+
+/** 取消当前扫描/清理：置位标记并终止正在运行的子进程 */
+export function cancelJunk(): boolean {
+  const job = activeJob
+  if (!job) return false
+  job.cancelled = true
+  for (const p of job.procs) {
+    try {
+      p.kill()
+    } catch {
+      /* 进程已退出 */
+    }
+  }
+  return true
+}
+
+function beginJob(): Job {
+  const job: Job = { cancelled: false, procs: new Set() }
+  activeJob = job
+  return job
+}
+
+function endJob(job: Job): void {
+  if (activeJob === job) activeJob = null
+}
+
+/** 把子进程登记到任务里，取消时统一终止 */
+function track(job: Job, proc: ChildProcess): void {
+  job.procs.add(proc)
+  proc.once('close', () => job.procs.delete(proc))
+}
 
 let sidCache = ''
 
@@ -33,37 +72,53 @@ async function recycleDirs(): Promise<string[]> {
   return dirs
 }
 
-/** 扫描指定规则 id（不传则全量），返回每个规则的空间占用 */
+/** 扫描指定规则 id（不传则全量），返回每个规则的空间占用；取消时返回空列表 */
 export async function scanJunk(
   ids: string[] | null,
   onProgress?: (p: ScanProgress) => void
 ): Promise<ScanItem[]> {
-  const rules = ids?.length ? JUNK_RULES.filter((r) => ids.includes(r.id)) : JUNK_RULES
-  const total = rules.length + 1
-  let done = 0
-  const items: ScanItem[] = []
-  // 回收站文件多时统计较慢，提前并行开始，边扫其他规则边算
-  const recycleTask = scanRecycleBin()
-  for (const rule of rules) {
-    onProgress?.({ current: rule.name, id: rule.id, done, total })
-    const item = await scanRule(rule)
-    items.push(item)
+  const job = beginJob()
+  try {
+    const rules = ids?.length ? JUNK_RULES.filter((r) => ids.includes(r.id)) : JUNK_RULES
+    const total = rules.length + 1
+    let done = 0
+    const items: ScanItem[] = []
+    // 回收站文件多时统计较慢，提前并行开始，边扫其他规则边算
+    const recycleTask = scanRecycleBin(job)
+    for (const rule of rules) {
+      if (job.cancelled) break
+      onProgress?.({ current: rule.name, id: rule.id, done, total })
+      items.push(await scanRule(rule, job))
+      done++
+    }
+    if (job.cancelled) {
+      await recycleTask
+      onProgress?.({ current: '已取消', id: 'cancelled', done, total })
+      return []
+    }
+    onProgress?.({ current: '回收站', id: RECYCLE_ID, done, total })
+    items.push(await recycleTask)
     done++
+    if (job.cancelled) {
+      onProgress?.({ current: '已取消', id: 'cancelled', done, total })
+      return []
+    }
+    onProgress?.({ current: '完成', id: 'done', done, total })
+    return items
+  } finally {
+    endJob(job)
   }
-  onProgress?.({ current: '回收站', id: RECYCLE_ID, done, total })
-  items.push(await recycleTask)
-  done++
-  onProgress?.({ current: '完成', id: 'done', done, total })
-  return items
 }
 
-async function scanRule(rule: JunkRule): Promise<ScanItem> {
+async function scanRule(rule: JunkRule, job: Job): Promise<ScanItem> {
   let files = 0
   let bytes = 0
   const samples: string[] = []
   for (const t of rule.targets) {
+    if (job.cancelled) break
     const roots = resolveGlob(t)
     for (const root of roots) {
+      if (job.cancelled) break
       if (samples.length < 3) samples.push(root)
       const st = await fs.stat(root).catch(() => null)
       if (st?.isFile()) {
@@ -73,6 +128,7 @@ async function scanRule(rule: JunkRule): Promise<ScanItem> {
         continue
       }
       await walkFiles(root, (_f, size) => {
+        if (job.cancelled) return false
         files++
         bytes += size
       })
@@ -89,63 +145,78 @@ async function scanRule(rule: JunkRule): Promise<ScanItem> {
   }
 }
 
-/** 清理选中规则；管理员规则合并成一次 UAC 提权；每步通过 onProgress 反馈 */
+/** 清理选中规则；管理员规则合并成一次 UAC 提权；每步通过 onProgress 反馈；可随时取消 */
 export async function cleanJunk(
   ids: string[],
   onProgress?: (p: ScanProgress) => void
 ): Promise<CleanResult> {
-  const rules = JUNK_RULES.filter((r) => ids.includes(r.id))
-  const result: CleanResult = { files: 0, bytes: 0, errors: [] }
-  const adminDirs: string[] = []
-  const total = rules.length + (ids.includes(RECYCLE_ID) ? 1 : 0)
-  let done = 0
-  for (const rule of rules) {
-    onProgress?.({ current: rule.name, id: rule.id, done, total })
-    for (const t of rule.targets) {
-      if (rule.admin) adminDirs.push(...resolveGlob(t))
-      else {
-        for (const root of resolveGlob(t)) {
-          const r = await deletePath(root, rule.id === 'thumbnail' ? undefined : root)
-          result.files += r.files
-          result.bytes += r.bytes
-          result.errors.push(...r.errors)
+  const job = beginJob()
+  try {
+    const rules = JUNK_RULES.filter((r) => ids.includes(r.id))
+    const result: CleanResult = { files: 0, bytes: 0, errors: [] }
+    const adminDirs: string[] = []
+    const total = rules.length + (ids.includes(RECYCLE_ID) ? 1 : 0)
+    let done = 0
+    for (const rule of rules) {
+      if (job.cancelled) break
+      onProgress?.({ current: rule.name, id: rule.id, done, total })
+      for (const t of rule.targets) {
+        if (job.cancelled) break
+        if (rule.admin) adminDirs.push(...resolveGlob(t))
+        else {
+          for (const root of resolveGlob(t)) {
+            if (job.cancelled) break
+            const r = await deletePath(root, rule.id === 'thumbnail' ? undefined : root, () => job.cancelled)
+            result.files += r.files
+            result.bytes += r.bytes
+            result.errors.push(...r.errors)
+          }
         }
       }
+      done++
     }
-    done++
-  }
-  if (adminDirs.length) {
-    // 提权脚本：只删文件内容，保留目录本身
-    onProgress?.({ current: '管理员项目', id: 'admin', done, total })
-    const lines = adminDirs.map((d) => `Remove-Item -LiteralPath '${d.replace(/'/g, "''")}'\\* -Recurse -Force -ErrorAction SilentlyContinue`)
-    const script = lines.join('\r\n')
-    try {
-      const before = await statDirs(adminDirs)
-      await runElevated(script)
-      const after = await statDirs(adminDirs)
-      result.bytes += Math.max(0, before - after)
-      result.files += Math.max(0, before - after > 0 ? 1 : 0)
-    } catch (e) {
-      result.errors.push(`管理员清理: ${(e as Error).message}`)
+    if (adminDirs.length && !job.cancelled) {
+      // 提权脚本：只删文件内容，保留目录本身
+      onProgress?.({ current: '管理员项目', id: 'admin', done, total })
+      const lines = adminDirs.map((d) => `Remove-Item -LiteralPath '${d.replace(/'/g, "''")}'\\* -Recurse -Force -ErrorAction SilentlyContinue`)
+      const script = lines.join('\r\n')
+      try {
+        const before = await statDirs(adminDirs, job)
+        await runElevated(script, 300000)
+        const after = await statDirs(adminDirs, job)
+        result.bytes += Math.max(0, before - after)
+        result.files += Math.max(0, before - after > 0 ? 1 : 0)
+      } catch (e) {
+        result.errors.push(`管理员清理: ${(e as Error).message}`)
+      }
     }
+    if (ids.includes(RECYCLE_ID) && !job.cancelled) {
+      const r = await cleanRecycleBin(
+        (m) => onProgress?.({ current: '回收站', id: RECYCLE_ID, done, total, files: m.files, bytes: m.bytes }),
+        job
+      )
+      result.files += r.files
+      result.bytes += r.bytes
+      result.errors.push(...r.errors)
+      done++
+    }
+    if (job.cancelled) {
+      onProgress?.({ current: '已取消', id: 'cancelled', done, total })
+      return result
+    }
+    onProgress?.({ current: '完成', id: 'done', done, total })
+    return result
+  } finally {
+    endJob(job)
   }
-  if (ids.includes(RECYCLE_ID)) {
-    const r = await cleanRecycleBin((m) =>
-      onProgress?.({ current: '回收站', id: RECYCLE_ID, done, total, files: m.files, bytes: m.bytes })
-    )
-    result.files += r.files
-    result.bytes += r.bytes
-    result.errors.push(...r.errors)
-    done++
-  }
-  onProgress?.({ current: '完成', id: 'done', done, total })
-  return result
 }
 
-async function statDirs(dirs: string[]): Promise<number> {
+async function statDirs(dirs: string[], job: Job): Promise<number> {
   let total = 0
   for (const d of dirs) {
+    if (job.cancelled) break
     await walkFiles(d, (_f, size) => {
+      if (job.cancelled) return false
       total += size
     })
   }
@@ -153,27 +224,30 @@ async function statDirs(dirs: string[]): Promise<number> {
 }
 
 /** 统计回收站文件数与总大小：先用 robocopy 列表模式（几十万文件约 1 秒），失败回退 PowerShell */
-async function measureRecycle(dirs: string[]): Promise<{ files: number; bytes: number }> {
-  if (!dirs.length) return { files: 0, bytes: 0 }
-  const fast = await robocopyMeasure(dirs)
+async function measureRecycle(dirs: string[], job: Job): Promise<{ files: number; bytes: number }> {
+  if (!dirs.length || job.cancelled) return { files: 0, bytes: 0 }
+  const fast = await robocopyMeasure(dirs, job)
   if (fast) return fast
+  if (job.cancelled) return { files: 0, bytes: 0 }
   const list = dirs.map((d) => `'${d.replace(/'/g, "''")}'`).join(',')
   const out = await runPowerShell(
     `$c=0;$s=[int64]0; foreach($p in @(${list})){ Get-ChildItem -LiteralPath $p -Recurse -File -Force -ErrorAction SilentlyContinue | ForEach-Object { $c++; $s += $_.Length } }; "{0}|{1}" -f $c,$s`,
-    600000
+    600000,
+    (p) => track(job, p)
   )
   const [c, s] = out.trim().split('|')
   return { files: parseInt(c || '0', 10) || 0, bytes: parseInt(s || '0', 10) || 0 }
 }
 
 /** robocopy /L 只统计不复制；/BYTES 输出精确字节 */
-async function robocopyMeasure(dirs: string[]): Promise<{ files: number; bytes: number } | null> {
+async function robocopyMeasure(dirs: string[], job: Job): Promise<{ files: number; bytes: number } | null> {
   const dummy = path.join(os.tmpdir(), 'pecklean-rc-empty')
   await fs.mkdir(dummy, { recursive: true }).catch(() => null)
   let files = 0
   let bytes = 0
   for (const dir of dirs) {
-    const one = await robocopyCount(dir, dummy)
+    if (job.cancelled) return null
+    const one = await robocopyCount(dir, dummy, job)
     if (!one) return null
     files += one.files
     bytes += one.bytes
@@ -181,13 +255,15 @@ async function robocopyMeasure(dirs: string[]): Promise<{ files: number; bytes: 
   return { files, bytes }
 }
 
-function robocopyCount(dir: string, dummy: string): Promise<{ files: number; bytes: number } | null> {
+function robocopyCount(dir: string, dummy: string, job: Job): Promise<{ files: number; bytes: number } | null> {
+  if (job.cancelled) return Promise.resolve(null)
   return new Promise((resolveP) => {
     const proc = spawn(
       'robocopy.exe',
       [dir, dummy, '/L', '/E', '/BYTES', '/MT:32', '/NC', '/NFL', '/NDL', '/NP', '/R:0', '/W:0'],
       { windowsHide: true }
     )
+    track(job, proc)
     let out = ''
     const timer = setTimeout(() => proc.kill(), 120000)
     proc.stdout.on('data', (d: Buffer) => (out += d.toString()))
@@ -211,13 +287,13 @@ function robocopyCount(dir: string, dummy: string): Promise<{ files: number; byt
   })
 }
 
-async function scanRecycleBin(): Promise<ScanItem> {
+async function scanRecycleBin(job: Job): Promise<ScanItem> {
   let files = 0
   let bytes = 0
   let dirs: string[] = []
   try {
     dirs = await recycleDirs()
-    const m = await measureRecycle(dirs)
+    const m = await measureRecycle(dirs, job)
     files = m.files
     bytes = m.bytes
   } catch {
@@ -228,7 +304,8 @@ async function scanRecycleBin(): Promise<ScanItem> {
 
 /** 删除回收站条目：先普通权限逐项删，剩下清不掉的再提权删 */
 async function cleanRecycleBin(
-  onCount?: (m: { files: number; bytes: number }) => void
+  onCount: ((m: { files: number; bytes: number }) => void) | undefined,
+  job: Job
 ): Promise<{ files: number; bytes: number; errors: string[] }> {
   const res = { files: 0, bytes: 0, errors: [] as string[] }
   let dirs: string[] = []
@@ -239,19 +316,21 @@ async function cleanRecycleBin(
     return res
   }
   if (!dirs.length) return res
-  const before = await measureRecycle(dirs)
+  const before = await measureRecycle(dirs, job)
   res.files = before.files
   res.bytes = before.bytes
+  if (job.cancelled) return res
   onCount?.(before)
   // 用 robocopy 空目录镜像删除：几十万小文件时比逐个删快得多
   for (const dir of dirs) {
+    if (job.cancelled) return res
     try {
-      await mirrorEmpty(dir)
+      await mirrorEmpty(dir, job)
     } catch {
       /* 失败时走下面的提权兜底 */
     }
   }
-  if (await hasEntries(dirs)) {
+  if (!job.cancelled && (await hasEntries(dirs))) {
     const purgeScript = dirs
       .map(
         (d) =>
@@ -264,13 +343,14 @@ async function cleanRecycleBin(
       res.errors.push(`回收站提权清理: ${(e as Error).message}`)
     }
   }
-  if (await hasEntries(dirs)) res.errors.push('部分回收站项目被占用，未能清除（可重启后再清理）')
+  if (!job.cancelled && (await hasEntries(dirs))) res.errors.push('部分回收站项目被占用，未能清除（可重启后再清理）')
   return res
 }
 
 /** 用空目录镜像清空目标目录（robocopy /MIR），返回是否执行成功 */
-function mirrorEmpty(dir: string): Promise<boolean> {
+function mirrorEmpty(dir: string, job: Job): Promise<boolean> {
   const empty = path.join(os.tmpdir(), 'sc-empty-mirror')
+  if (job.cancelled) return Promise.resolve(false)
   return fs.mkdir(empty, { recursive: true }).then(
     () =>
       new Promise<boolean>((resolveP) => {
@@ -279,6 +359,7 @@ function mirrorEmpty(dir: string): Promise<boolean> {
           [empty, dir, '/MIR', '/MT:16', '/R:0', '/W:0', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS', '/NP'],
           { windowsHide: true }
         )
+        track(job, proc)
         proc.on('close', (code) => resolveP((code ?? 16) < 8))
         proc.on('error', () => resolveP(false))
       })

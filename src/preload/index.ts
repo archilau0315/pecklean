@@ -6,6 +6,7 @@ const api = {
 
   junkScan: (ids: string[] | null) => ipcRenderer.invoke('junk:scan', ids),
   junkClean: (ids: string[]) => ipcRenderer.invoke('junk:clean', ids),
+  junkCancel: () => ipcRenderer.invoke('junk:cancel'),
   onJunkScanProgress: (cb: (p: unknown) => void) => {
     const fn = (_e: unknown, p: unknown): void => cb(p)
     ipcRenderer.on('junk:scan-progress', fn)

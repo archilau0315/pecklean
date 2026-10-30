@@ -25,6 +25,7 @@ interface Api {
   pickFolder(opts: { title: string; defaultPath?: string }): Promise<string>
   junkScan(ids: string[] | null): Promise<ScanItem[]>
   junkClean(ids: string[]): Promise<CleanResult>
+  junkCancel(): Promise<boolean>
   onJunkScanProgress(cb: (p: ScanProgress) => void): () => void
   onJunkCleanProgress(cb: (p: ScanProgress) => void): () => void
   privacyScan(): Promise<PrivacyItem[]>

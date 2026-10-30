@@ -1,5 +1,5 @@
 /** 主进程通用工具：大小格式化、安全删除、目录遍历、PowerShell 执行、提权 */
-import { spawn } from 'child_process'
+import { spawn, type ChildProcess } from 'child_process'
 import { promises as fs } from 'fs'
 import { existsSync } from 'fs'
 import os from 'os'
@@ -87,8 +87,8 @@ export interface DeleteResult {
 
 const SKIP_DIRS = new Set(['system volume information', '$recycle.bin'])
 
-/** 删除目录/文件（含通配），返回删除统计。root 之外的内容不会删 */
-export async function deletePath(target: string, root?: string): Promise<DeleteResult> {
+/** 删除目录/文件（含通配），返回删除统计。root 之外的内容不会删；shouldStop 返回 true 时尽快停止 */
+export async function deletePath(target: string, root?: string, shouldStop?: () => boolean): Promise<DeleteResult> {
   const res: DeleteResult = { files: 0, bytes: 0, errors: [] }
   const abs = expand(target)
   if (root) {
@@ -118,11 +118,12 @@ export async function deletePath(target: string, root?: string): Promise<DeleteR
     else res.errors.push(`${abs}: ${ok.err}`)
     return res
   }
-  await deleteDir(abs, res)
+  await deleteDir(abs, res, shouldStop)
   return res
 }
 
-async function deleteDir(dir: string, res: DeleteResult): Promise<void> {
+async function deleteDir(dir: string, res: DeleteResult, shouldStop?: () => boolean): Promise<void> {
+  if (shouldStop?.()) return
   if (SKIP_DIRS.has(path.basename(dir).toLowerCase())) return
   let entries: import('fs').Dirent[]
   try {
@@ -132,9 +133,10 @@ async function deleteDir(dir: string, res: DeleteResult): Promise<void> {
     return
   }
   for (const ent of entries) {
+    if (shouldStop?.()) return
     const full = path.join(dir, ent.name)
     if (ent.isDirectory()) {
-      await deleteDir(full, res)
+      await deleteDir(full, res, shouldStop)
       await fs.rmdir(full).catch(() => res.errors.push(`目录非空: ${full}`))
     } else {
       const ok = await unlinkQuiet(full)
@@ -187,8 +189,8 @@ export async function walkFiles(
   }
 }
 
-/** 执行 PowerShell 并返回 stdout（强制 UTF-8 输出，避免中文乱码） */
-export function runPowerShell(script: string, timeoutMs = 60000): Promise<string> {
+/** 执行 PowerShell 并返回 stdout（强制 UTF-8 输出，避免中文乱码）；onProc 用于把子进程交给调用方终止 */
+export function runPowerShell(script: string, timeoutMs = 60000, onProc?: (p: ChildProcess) => void): Promise<string> {
   const full = `[Console]::OutputEncoding = [System.Text.Encoding]::UTF8\r\n${script}`
   return new Promise((resolveP, rejectP) => {
     const proc = spawn(
@@ -196,6 +198,7 @@ export function runPowerShell(script: string, timeoutMs = 60000): Promise<string
       ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', full],
       { windowsHide: true }
     )
+    onProc?.(proc)
     let out = ''
     let err = ''
     const timer = setTimeout(() => proc.kill(), timeoutMs)
