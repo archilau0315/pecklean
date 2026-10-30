@@ -26,6 +26,7 @@ interface Api {
   junkScan(ids: string[] | null): Promise<ScanItem[]>
   junkClean(ids: string[]): Promise<CleanResult>
   onJunkScanProgress(cb: (p: ScanProgress) => void): () => void
+  onJunkCleanProgress(cb: (p: ScanProgress) => void): () => void
   privacyScan(): Promise<PrivacyItem[]>
   privacyClean(ids: string[]): Promise<CleanResult>
   startupList(): Promise<StartupItem[]>

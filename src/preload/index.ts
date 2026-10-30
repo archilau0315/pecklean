@@ -11,6 +11,11 @@ const api = {
     ipcRenderer.on('junk:scan-progress', fn)
     return () => ipcRenderer.removeListener('junk:scan-progress', fn)
   },
+  onJunkCleanProgress: (cb: (p: unknown) => void) => {
+    const fn = (_e: unknown, p: unknown): void => cb(p)
+    ipcRenderer.on('junk:clean-progress', fn)
+    return () => ipcRenderer.removeListener('junk:clean-progress', fn)
+  },
 
   privacyScan: () => ipcRenderer.invoke('privacy:scan'),
   privacyClean: (ids: string[]) => ipcRenderer.invoke('privacy:clean', ids),

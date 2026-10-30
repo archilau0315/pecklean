@@ -41,7 +41,9 @@ export function registerIpc(): void {
   ipcMain.handle('junk:scan', async (_e, ids: string[] | null) =>
     scanJunk(ids, (p) => push('junk:scan-progress', p))
   )
-  ipcMain.handle('junk:clean', (_e, ids: string[]) => cleanJunk(ids))
+  ipcMain.handle('junk:clean', (_e, ids: string[]) =>
+    cleanJunk(ids, (p) => push('junk:clean-progress', p))
+  )
   ipcMain.handle('junk:ids', () => JUNK_IDS)
 
   // ── 隐私清理 ──

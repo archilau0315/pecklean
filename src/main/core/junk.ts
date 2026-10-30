@@ -89,12 +89,18 @@ async function scanRule(rule: JunkRule): Promise<ScanItem> {
   }
 }
 
-/** 清理选中规则；管理员规则合并成一次 UAC 提权 */
-export async function cleanJunk(ids: string[]): Promise<CleanResult> {
+/** 清理选中规则；管理员规则合并成一次 UAC 提权；每步通过 onProgress 反馈 */
+export async function cleanJunk(
+  ids: string[],
+  onProgress?: (p: ScanProgress) => void
+): Promise<CleanResult> {
   const rules = JUNK_RULES.filter((r) => ids.includes(r.id))
   const result: CleanResult = { files: 0, bytes: 0, errors: [] }
   const adminDirs: string[] = []
+  const total = rules.length + (ids.includes(RECYCLE_ID) ? 1 : 0)
+  let done = 0
   for (const rule of rules) {
+    onProgress?.({ current: rule.name, id: rule.id, done, total })
     for (const t of rule.targets) {
       if (rule.admin) adminDirs.push(...resolveGlob(t))
       else {
@@ -106,9 +112,11 @@ export async function cleanJunk(ids: string[]): Promise<CleanResult> {
         }
       }
     }
+    done++
   }
   if (adminDirs.length) {
     // 提权脚本：只删文件内容，保留目录本身
+    onProgress?.({ current: '管理员项目', id: 'admin', done, total })
     const lines = adminDirs.map((d) => `Remove-Item -LiteralPath '${d.replace(/'/g, "''")}'\\* -Recurse -Force -ErrorAction SilentlyContinue`)
     const script = lines.join('\r\n')
     try {
@@ -122,11 +130,15 @@ export async function cleanJunk(ids: string[]): Promise<CleanResult> {
     }
   }
   if (ids.includes(RECYCLE_ID)) {
-    const r = await cleanRecycleBin()
+    const r = await cleanRecycleBin((m) =>
+      onProgress?.({ current: '回收站', id: RECYCLE_ID, done, total, files: m.files, bytes: m.bytes })
+    )
     result.files += r.files
     result.bytes += r.bytes
     result.errors.push(...r.errors)
+    done++
   }
+  onProgress?.({ current: '完成', id: 'done', done, total })
   return result
 }
 
@@ -215,7 +227,9 @@ async function scanRecycleBin(): Promise<ScanItem> {
 }
 
 /** 删除回收站条目：先普通权限逐项删，剩下清不掉的再提权删 */
-async function cleanRecycleBin(): Promise<{ files: number; bytes: number; errors: string[] }> {
+async function cleanRecycleBin(
+  onCount?: (m: { files: number; bytes: number }) => void
+): Promise<{ files: number; bytes: number; errors: string[] }> {
   const res = { files: 0, bytes: 0, errors: [] as string[] }
   let dirs: string[] = []
   try {
@@ -228,6 +242,7 @@ async function cleanRecycleBin(): Promise<{ files: number; bytes: number; errors
   const before = await measureRecycle(dirs)
   res.files = before.files
   res.bytes = before.bytes
+  onCount?.(before)
   // 用 robocopy 空目录镜像删除：几十万小文件时比逐个删快得多
   for (const dir of dirs) {
     try {

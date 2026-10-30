@@ -16,10 +16,13 @@ export interface ScanItem {
 
 export interface ScanProgress {
   current: string
-  /** 当前项的稳定 id（规则 id / recyclebin / done），供渲染层翻译 */
+  /** 当前项的稳定 id（规则 id / recyclebin / admin / done），供渲染层翻译 */
   id?: string
   done: number
   total: number
+  /** 清理回收站时附带：待清理文件数与总字节 */
+  files?: number
+  bytes?: number
 }
 
 export interface CleanResult {

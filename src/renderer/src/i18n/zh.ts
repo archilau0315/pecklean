@@ -45,6 +45,7 @@ export const zh: Record<string, string> = {
   'junk.scanning': '扫描中…',
   'junk.clean': '一键清理',
   'junk.cleaning': '清理中…',
+  'junk.cleaningHint': '正在清理…',
   'junk.scanningHint': '正在扫描…',
   'junk.result': '已清理 {files} 项，释放 {size}',
   'junk.result.errors': '跳过 {n} 个被占用的文件（正常现象）',
@@ -89,6 +90,7 @@ export const zh: Record<string, string> = {
   'junk.rule.iqiyi': '爱奇艺缓存',
   'junk.rule.vscode': 'VS Code 缓存',
   'junk.rule.recyclebin': '回收站',
+  'junk.rule.admin': '系统级项目',
 
   // ── 隐私清理 ──
   'privacy.title': '隐私清理',

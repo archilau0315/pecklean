@@ -45,6 +45,7 @@ export const en: Record<string, string> = {
   'junk.scanning': 'Scanning…',
   'junk.clean': 'Clean Now',
   'junk.cleaning': 'Cleaning…',
+  'junk.cleaningHint': 'Cleaning…',
   'junk.scanningHint': 'Scanning…',
   'junk.result': 'Cleaned {files} items, freed {size}',
   'junk.result.errors': '{n} files were in use and skipped (this is normal)',
@@ -87,6 +88,7 @@ export const en: Record<string, string> = {
   'junk.rule.iqiyi': 'iQIYI cache',
   'junk.rule.vscode': 'VS Code cache',
   'junk.rule.recyclebin': 'Recycle bin',
+  'junk.rule.admin': 'System items',
 
   // ── Privacy ──
   'privacy.title': 'Privacy',

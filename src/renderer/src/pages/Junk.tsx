@@ -11,6 +11,8 @@ export default function Junk(): React.JSX.Element {
   const [scanning, setScanning] = useState(false)
   const [cleaning, setCleaning] = useState(false)
   const [progress, setProgress] = useState('')
+  const [cleanProgress, setCleanProgress] = useState('')
+  const [elapsed, setElapsed] = useState(0)
   const [result, setResult] = useState<CleanResult | null>(null)
 
   const scan = async (): Promise<void> => {
@@ -37,13 +39,29 @@ export default function Junk(): React.JSX.Element {
     const adminCount = items.filter((i) => selected.has(i.id) && i.admin).length
     if (adminCount > 0 && !confirm(t('junk.uacConfirm', { n: adminCount }))) return
     setCleaning(true)
+    setCleanProgress('')
+    setElapsed(0)
+    const started = Date.now()
+    const timer = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 1000)
+    const off = window.api.onJunkCleanProgress((p: ScanProgress) => {
+      let text = junkProgress(t, p)
+      if (p.id === 'recyclebin' && p.files !== undefined) {
+        text += ` (${t('junk.item.size', { files: p.files, size: formatBytes(p.bytes || 0) })})`
+      } else if (p.id !== 'done' && p.total > 0) {
+        text += ` (${Math.min(p.done + 1, p.total)}/${p.total})`
+      }
+      setCleanProgress(text)
+    })
     try {
       const res = await window.api.junkClean([...selected])
       setResult(res)
       setItems((prev) => prev.filter((i) => !selected.has(i.id)))
       setSelected(new Set())
     } finally {
+      off()
+      clearInterval(timer)
       setCleaning(false)
+      setCleanProgress('')
     }
   }
 
@@ -76,6 +94,11 @@ export default function Junk(): React.JSX.Element {
         </div>
       </div>
       {scanning && <div className="progress-line">{progress || t('junk.scanningHint')}</div>}
+      {cleaning && (
+        <div className="progress-line">
+          {cleanProgress || t('junk.cleaningHint')} · {elapsed}s
+        </div>
+      )}
       {result && (
         <div className={`result-box ${result.errors.length ? 'warn' : ''}`}>
           {t('junk.result', { files: result.files, size: formatBytes(result.bytes) })}
