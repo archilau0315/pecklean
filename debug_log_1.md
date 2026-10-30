@@ -179,3 +179,10 @@
 - 模块：renderer/src/assets/logo.png、build/icon.png、renderer/src/App.tsx、renderer/src/styles.css、renderer/src/images.d.ts
 - 变更简述：侧栏 logo 改回「图片剪影」方案并放大到 40px（object-fit: cover，圆角 10px）。重新制作干净的啄木鸟侧面头像素材：白色剪影尽可能撑满方形，底色为墨绿→青绿对角渐变，四边满铺无留白；同源导出 build/icon.png（256×256），保证侧栏 logo 与任务栏/桌面图标是同一张图。废除上一版内联 SVG，恢复 *.png 模块声明。
 - 备注：原 assets/logo.png 与 build/icon.png 左侧存在一条 16% 宽的白色竖带（生成图残留），喙部被白带吞掉；已重绘并裁掉右下角生成水印。Electron 离屏截图（1280×800，stub preload）核对侧栏实际显示，造型清晰、无白边；typecheck、build 通过，正在重新打包 exe。
+
+## 25
+
+- 时间：2026-10-30 11:22
+- 模块：renderer/src/assets/logo.png、build/icon.png
+- 变更简述：啄木鸟剪影头部新增圆形眼睛镂空，洞体透出墨绿→青绿渐变底色，40px（侧栏）清晰可辨，32px 仍能看出绿点。同步修复 package.json 开头双 UTF-8 BOM（EF BB BF ×2）导致的 JSON 解析失败——读取时去除多余 U+FEFF，无 BOM 写回。
+- 备注：离屏截图（40/32/24px 三档缩略图 + 5× 放大）核对眼睛识别度，32px 以上无压力。typecheck、build 通过。
