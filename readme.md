@@ -160,7 +160,7 @@ flowchart LR
 
 #### 方式一：免安装版（推荐）
 
-直接下载：[Pecklean-1.0.0-x64.exe](https://github.com/archilau0315/pecklean/releases/latest)（77.1 MB），双击即用，无需安装 Node.js 或任何运行库。单个文件复制到其它 64 位 Windows 电脑上也能直接运行。
+直接下载：[Pecklean-2.0.0-x64.exe](https://github.com/archilau0315/pecklean/releases/latest)（77.1 MB），双击即用，无需安装 Node.js 或任何运行库。单个文件复制到其它 64 位 Windows 电脑上也能直接运行。
 
 ```text
 首次启动 → 自解压到临时目录（约 6~8 秒）→ 窗口出现
@@ -425,7 +425,7 @@ Both stay in sync with matching commit SHAs.
 
 #### Option 1 — Portable build (recommended)
 
-Download [Pecklean-1.0.0-x64.exe](https://github.com/archilau0315/pecklean/releases/latest) (77.1 MB), double-click to run — no Node.js, no runtime needed. The single file can be copied to any other 64-bit Windows machine.
+Download [Pecklean-2.0.0-x64.exe](https://github.com/archilau0315/pecklean/releases/latest) (77.1 MB), double-click to run — no Node.js, no runtime needed. The single file can be copied to any other 64-bit Windows machine.
 
 ```text
 first launch → self-extract to temp folder (~6–8s) → window appears
