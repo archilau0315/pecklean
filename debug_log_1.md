@@ -430,3 +430,11 @@
   - 打包产物名 Pecklean-${version}-x64.exe 自动跟随版本
   - readme 中英文下载链接同步更新为 2.0.0
 - 备注：无
+
+## 51
+
+- 时间：2026-10-31 10:30
+- 模块：src/renderer/src/i18n/zh.ts、src/renderer/src/i18n/en.ts
+- 变更简述：侧边栏底部 nav.footer 硬编码 v1.0 → v2.0。Home 页面底部 home.version 已用 app.getVersion() 动态显示，但侧边栏底部的 `匡形无界-啄之堂 · v1.0` / `Kuanform Boundless · Archilau Studio · v1.0` 是写死的，升级到 v2.0 后忘了同步。
+  - 另发现 portable exe 解压到临时目录时复用了 v1.0 残留的 Temp 目录，导致启动旧版本。已清除 Temp 目录并重建 EXE。
+- 备注：下次版本升级时记得同时改两处，或把 nav.footer 也改成动态 version 占位符。

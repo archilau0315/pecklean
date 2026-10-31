@@ -14,7 +14,7 @@ export const zh: Record<string, string> = {
   'nav.move': '目录搬移',
   'nav.schedule': '定时清理',
   'nav.system': '系统维护',
-  'nav.footer': '匡形无界-啄之堂 · v1.0',
+  'nav.footer': '匡形无界-啄之堂 · v2.0',
 
   // ── 首页 ──
   'home.title': '清理中心',

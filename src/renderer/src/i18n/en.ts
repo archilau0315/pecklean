@@ -14,7 +14,7 @@ export const en: Record<string, string> = {
   'nav.move': 'Move Folders',
   'nav.schedule': 'Scheduled Cleanup',
   'nav.system': 'System',
-  'nav.footer': 'Kuanform Boundless · Archilau Studio · v1.0',
+  'nav.footer': 'Kuanform Boundless · Archilau Studio · v2.0',
 
   // ── Home ──
   'home.title': 'Cleanup Center',
