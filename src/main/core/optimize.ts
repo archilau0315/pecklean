@@ -578,18 +578,20 @@ export interface HealthReport {
 
 export async function runFullDiagnosis(): Promise<HealthReport> {
   const { scanJunk } = await import('./junk')
-  const { listStartup } = await import('./startup')
+  const { listStartup, listDisabled } = await import('./startup')
   const { scanPrivacy } = await import('./privacy')
 
-  const [junk, startups, privacy, optimize] = await Promise.all([
+  const [junk, startups, disabledEntries, privacy, optimize] = await Promise.all([
     scanJunk(null, () => {}),
     listStartup(),
+    listDisabled(),
     scanPrivacy(),
     scanOptimize()
   ])
 
   const junkBytes = junk.reduce((s, x) => s + (x.bytes || 0), 0)
-  const disabled = startups.filter((s) => !s.enabled).length
+  // 已禁用项：列表中 enabled=false 的（文件夹项改名后仍在列表）+ 注册表备份键里的项
+  const disabled = startups.filter((s) => !s.enabled).length + disabledEntries.length
   const applied = optimize.filter((o) => o.applied).length
 
   let score = 60

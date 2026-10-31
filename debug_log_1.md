@@ -406,3 +406,17 @@
 - 体检分数变化：40 → 49（+9，优化项 min(15,13×2)=15 加满）
 - 本轮操作：清临时文件 9.6GB + 清空回收站（D/E 盘，C 盘目录已不存在）+ 应用全部优化
 - 备注：剩余扣分：垃圾 373MB（-20 扣满）、隐私 3 项（-6）、启动 0/26（+0）。下一步可清隐私（关 Edge 后）+ 禁用安全启动项。
+
+## 49
+
+- 时间：2026-10-31 10:00
+- 模块：src/main/core/startup.ts（listDisabled 导出）、src/main/core/optimize.ts（runFullDiagnosis 启动计数）
+- 变更简述：修复体检启动项计数 bug——toggleStartup 禁用注册表项时把值移入 PeckleanDisabled 备份键，导致 listStartup() 只返回仍启用的项，`startups.filter(!enabled).length` 永远是 0，分数永远拿不到启动项加分。
+  - 修复：导出 listDisabled()，runFullDiagnosis 中 `disabled = 列表中 enabled=false 的数量 + 备份键里的项数量`
+- 本轮操作：
+  - 关 Edge → 清 edge-history（隐私 3→1→0）
+  - 禁用 16 项非必要启动项（360 全家桶/百度网盘/D5/抖音/QQ/微信/QQ音乐/Notion/WorkBuddy/Autodesk 三件套等），1 项 Autodesk Genuine Service 提权失败
+  - 清 feature-usage + recent-files（Windows 会持续重写，属正常反复）
+- 体检分数变化：49 → 55（隐私清零）→ 51（bug 导致启动计数为 0）→ 61（修复启动计数 +10）→ 65（再清隐私 +4）
+- 当前：65/100，仅剩垃圾 345MB 扣分（-20 扣满，进程锁定的临时文件，需关程序或重启才能清）
+- 备注：feature-usage/recent-files 是 Windows 实时生成的痕迹，清完会立刻再生，长期为 0 不现实，可考虑在打分公式里给这两项降权或不计入

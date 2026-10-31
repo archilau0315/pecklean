@@ -89,7 +89,7 @@ export async function listStartup(): Promise<StartupItem[]> {
   return items
 }
 
-async function listDisabled(): Promise<RawEntry[]> {
+export async function listDisabled(): Promise<RawEntry[]> {
   const out: RawEntry[] = []
   for (const [hive, key] of [
     ['HKCU', RUN_BACKUP_KEYS[0]],
