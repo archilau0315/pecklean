@@ -16,6 +16,7 @@
   <img src="https://img.shields.io/badge/Electron-33-2B2E3A?logo=electron&logoColor=white" alt="Electron" />
   <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black" alt="React" />
   <img src="https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/version-2.0.0-3FB950" alt="Version" />
   <img src="https://img.shields.io/badge/%E5%85%8D%E5%AE%89%E8%A3%85-%E5%8D%95%E6%96%87%E4%BB%B6-3FB950" alt="Portable" />
   <img src="https://img.shields.io/badge/%E5%B9%BF%E5%91%8A-0-E5534B" alt="No Ads" />
 </p>
