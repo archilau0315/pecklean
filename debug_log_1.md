@@ -394,3 +394,15 @@
 - 垃圾主要被占用的进程：Trae CN / 7z / 腾讯 / Edge。关 Edge 清历史 + 禁几个启动项 + apply optimize 可进一步涨到 80+
 - 额外清理：PowerShell `Clear-RecycleBin -Force` 秒清 3.5GB（比 robocopy /MIR 快得多）；`reg delete "HKCU\...\RunMRU" /va /f` 清注册表值
 - 备注：bug 根因——scanPrivacy 把"有定义但无痕迹"的项也算进去了。Junk/Optimize/Startup 的 scan 都有类似 count 逻辑要检查吗？
+
+## 48
+
+- 时间：2026-10-31 09:30
+- 模块：src/main/core/optimize.ts（setReg / buildSetScript / buildBackupAndSetScript / undo 管理员路径）
+- 变更简述：修复 `reg add` 类型名 bug——`type.replace('REG_', '').toLowerCase()` 把 `REG_SZ`/`REG_DWORD` 变成 `sz`/`dword`，而 `reg add /t` 要求完整类型名，导致 HKCU/HKLM 写入全部静默失败。
+  - 修复：4 处 `reg add` 调用直接传 `${type}`（完整 REG_SZ/REG_DWORD）
+  - 影响：之前 applyOptimize 报"Some HKCU regs did not apply"，HKLM 项因 `2>$null` 静默失败却被误判成功
+  - 修复后实测：14/14 项全部应用成功，optimizeApplied 3→13（usb.writeCache 因 GUID 类键 0000 不存在，1 项未应用属正常）
+- 体检分数变化：40 → 49（+9，优化项 min(15,13×2)=15 加满）
+- 本轮操作：清临时文件 9.6GB + 清空回收站（D/E 盘，C 盘目录已不存在）+ 应用全部优化
+- 备注：剩余扣分：垃圾 373MB（-20 扣满）、隐私 3 项（-6）、启动 0/26（+0）。下一步可清隐私（关 Edge 后）+ 禁用安全启动项。

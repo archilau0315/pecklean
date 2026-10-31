@@ -226,9 +226,8 @@ function queryReg(key: string, valueName: string): string | null {
 }
 
 function setReg(key: string, valueName: string, type: string, target: string | number): void {
-  const t = type.replace('REG_', '').toLowerCase()
   const v = String(target)
-  execSync(`reg add "${key}" /v "${valueName}" /t ${t} /d "${v}" /f`, {
+  execSync(`reg add "${key}" /v "${valueName}" /t ${type} /d "${v}" /f`, {
     stdio: ['ignore', 'ignore', 'pipe'],
     timeout: 5000
   })
@@ -270,9 +269,8 @@ function buildQueryScript(ops: Array<{ key: string; value: string }>): string {
 /** 生成 PowerShell：批量设置注册表值 */
 function buildSetScript(ops: RegOp[]): string {
   return ops.map((op) => {
-    const t = op.type.replace('REG_', '').toLowerCase()
     const v = String(op.target)
-    return `reg add "${op.key}" /v "${op.value}" /t ${t} /d "${v}" /f 2>$null`
+    return `reg add "${op.key}" /v "${op.value}" /t ${op.type} /d "${v}" /f 2>$null`
   }).join(' ; ')
 }
 
@@ -296,9 +294,8 @@ function buildBackupAndSetScript(ops: RegOp[], tempFile: string): string {
     lines.push(`  if ($null -eq $pv) { $bk['${bkKey.replace(/'/g, "''")}'] = $null } else { $bk['${bkKey.replace(/'/g, "''")}'] = [string]$pv.'${escapedVal}' }`)
     lines.push(`} catch { $bk['${bkKey.replace(/'/g, "''")}'] = $null }`)
     // 设置新值
-    const t = op.type.replace('REG_', '').toLowerCase()
     const v = String(op.target)
-    lines.push(`reg add "${op.key}" /v "${op.value}" /t ${t} /d "${v}" /f 2>$null | Out-Null`)
+    lines.push(`reg add "${op.key}" /v "${op.value}" /t ${op.type} /d "${v}" /f 2>$null | Out-Null`)
   }
   lines.push(`$bk | ConvertTo-Json -Compress | Set-Content -Path '${tempFile.replace(/'/g, "''")}' -Encoding UTF8`)
   return lines.join("\n")
@@ -523,8 +520,7 @@ export async function undoOptimize(itemIds: string[]): Promise<OptimizeApplyResu
       if (snap.original === null) {
         ops.push(`reg delete "${snap.key}" /v "${snap.value}" /f 2>$null`)
       } else {
-        const t = snap.type.replace('REG_', '').toLowerCase()
-        ops.push(`reg add "${snap.key}" /v "${snap.value}" /t ${t} /d "${snap.original}" /f 2>$null`)
+        ops.push(`reg add "${snap.key}" /v "${snap.value}" /t ${snap.type} /d "${snap.original}" /f 2>$null`)
       }
     }
     try {
