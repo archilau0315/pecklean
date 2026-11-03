@@ -326,49 +326,27 @@ async function cleanRecycleBin(
   res.bytes = before.bytes
   if (job.cancelled) return res
   onCount?.(before)
-  // 用 robocopy 空目录镜像删除：几十万小文件时比逐个删快得多
-  for (const dir of dirs) {
-    if (job.cancelled) return res
+  // Clear-RecycleBin 秒清整个回收站（不再用 robocopy /MIR，大回收站会卡死）
+  if (!job.cancelled) {
     try {
-      await mirrorEmpty(dir, job)
-    } catch {
-      /* 失败时走下面的提权兜底 */
-    }
-  }
-  if (!job.cancelled && (await hasEntries(dirs))) {
-    const purgeScript = dirs
-      .map(
-        (d) =>
-          `Get-ChildItem -LiteralPath '${d.replace(/'/g, "''")}' -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue`
-      )
-      .join('\r\n')
-    try {
-      await runElevated(purgeScript, 600000)
+      await runPowerShell('Clear-RecycleBin -Force -ErrorAction SilentlyContinue', 120000)
     } catch (e) {
-      res.errors.push(`回收站提权清理: ${(e as Error).message}`)
+      // 提权兜底：按 SID 目录逐个删
+      const purgeScript = dirs
+        .map(
+          (d) =>
+            `Get-ChildItem -LiteralPath '${d.replace(/'/g, "''")}' -Force -ErrorAction SilentlyContinue | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue`
+        )
+        .join('\r\n')
+      try {
+        await runElevated(purgeScript, 300000)
+      } catch (e2) {
+        res.errors.push(`回收站提权清理: ${(e2 as Error).message}`)
+      }
     }
   }
   if (!job.cancelled && (await hasEntries(dirs))) res.errors.push('部分回收站项目被占用，未能清除（可重启后再清理）')
   return res
-}
-
-/** 用空目录镜像清空目标目录（robocopy /MIR），返回是否执行成功 */
-function mirrorEmpty(dir: string, job: Job): Promise<boolean> {
-  const empty = path.join(os.tmpdir(), 'sc-empty-mirror')
-  if (job.cancelled) return Promise.resolve(false)
-  return fs.mkdir(empty, { recursive: true }).then(
-    () =>
-      new Promise<boolean>((resolveP) => {
-        const proc = spawn(
-          'robocopy.exe',
-          [empty, dir, '/MIR', '/MT:16', '/R:0', '/W:0', '/NFL', '/NDL', '/NJH', '/NJS', '/NC', '/NS', '/NP'],
-          { windowsHide: true }
-        )
-        track(job, proc)
-        proc.on('close', (code) => resolveP((code ?? 16) < 8))
-        proc.on('error', () => resolveP(false))
-      })
-  )
 }
 
 async function hasEntries(dirs: string[]): Promise<boolean> {

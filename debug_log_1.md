@@ -438,3 +438,10 @@
 - 变更简述：侧边栏底部 nav.footer 硬编码 v1.0 → v2.0。Home 页面底部 home.version 已用 app.getVersion() 动态显示，但侧边栏底部的 `匡形无界-啄之堂 · v1.0` / `Kuanform Boundless · Archilau Studio · v1.0` 是写死的，升级到 v2.0 后忘了同步。
   - 另发现 portable exe 解压到临时目录时复用了 v1.0 残留的 Temp 目录，导致启动旧版本。已清除 Temp 目录并重建 EXE。
 - 备注：下次版本升级时记得同时改两处，或把 nav.footer 也改成动态 version 占位符。
+
+## 52
+
+- 时间：2026-11-03 09:15
+- 模块：core/junk.ts
+- 变更简述：cleanRecycleBin 把 robocopy /MIR（大回收站会卡几个小时）换成 Clear-RecycleBin -Force（秒清）；提权兜底逻辑保留；删除不再使用的 mirrorEmpty 函数
+- 备注：实测 robocopy.exe 从 08:10 僵死到 09:10 还在跑，taskkill 后用户才能重新操作；PowerShell Clear-RecycleBin 是唯一可靠的回收站清空方式
