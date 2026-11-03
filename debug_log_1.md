@@ -445,3 +445,10 @@
 - 模块：core/junk.ts
 - 变更简述：cleanRecycleBin 把 robocopy /MIR（大回收站会卡几个小时）换成 Clear-RecycleBin -Force（秒清）；提权兜底逻辑保留；删除不再使用的 mirrorEmpty 函数
 - 备注：实测 robocopy.exe 从 08:10 僵死到 09:10 还在跑，taskkill 后用户才能重新操作；PowerShell Clear-RecycleBin 是唯一可靠的回收站清空方式
+
+## 53
+
+- 时间：2026-11-03 09:20
+- 模块：package.json
+- 变更简述：版本号 2.0.0 -> 2.0.1（fix: robocopy /MIR 卡死回收站清理）
+- 备注：补丁版本
